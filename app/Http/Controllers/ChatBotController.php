@@ -25,22 +25,37 @@ class ChatBotController extends Controller
         $knowledgebaseData = Knowledgebase::all()->map(fn($entry) => "{$entry->title}: {$entry->content}")->implode("\n");
 
         // Define the knowledge base (removing 'system' role)
-        $knowledgebase = "KNOWLEDGEBASE:\n\n" . $knowledgebaseData . "\n\n" . "
-                        You will be responding to the incoming question, don't give anything about us yet if no direct questions about us is asked but offer to be asked about us, answer as if you ar one of us, like you are a volunteer of kalinga ng kababaihan, respond as professional, answer if needed, if ever the question is not about whatever in the knowledge base, simply responed 'I'am sorry, I don't have an answer right now.' don't mention the phrase 'knowledge base' provided to you, if the question is about us and answerable through the knowledge base, please don't answer plainly,
-                        make it casual but professional, again don't give information unless asked and don't send greetings if you already sent one, also, stop re introducing yourself once you did already unless spicifically asked. Now, respond to the incoming question strictly based on the knowledge base nothing else:";
+        // $knowledgebase = "KNOWLEDGEBASE:\n\n" . $knowledgebaseData . "\n\n" . "
+        //                 You will be responding to the incoming question, don't give anything about us yet if no direct questions about us is asked but offer to be asked about us, answer as if you ar one of us, like you are a volunteer of kalinga ng kababaihan, respond as professional, answer if needed, if ever the question is not about whatever in the knowledge base, simply responed 'I'am sorry, I don't have an answer right now.' don't mention the phrase 'knowledge base' provided to you, if the question is about us and answerable through the knowledge base, please don't answer plainly,
+        //                 make it casual but professional, again don't give information unless asked and don't send greetings if you already sent one, also, stop re introducing yourself once you did already unless spicifically asked. Now, respond to the incoming question strictly based on the knowledge base nothing else:";
+
+        $knowledgebase = "
+                        You are a helpful, friendly, and knowledgeable volunteer of Kalinga ng Kababaihan.
+                        Use the information provided below (the KNOWLEDGEBASE) to answer questions accurately, naturally, and professionally.
+
+                        --- IMPORTANT RULES ---
+                        1. Do NOT mention or refer to the 'knowledgebase' itself.
+                        2. Only give information about Kalinga ng Kababaihan when the user directly asks or when it is clearly relevant.
+                        3. Do NOT invent information that is not found in the knowledgebase.
+                        4. If the question is not answerable using the knowledgebase, respond with:
+                        \"I'm sorry, I don't have an answer right now.\"
+                        5. Keep responses conversational, warm, and helpful—sound like a real volunteer.
+                        6. Do NOT reintroduce yourself unless the user specifically asks.
+                        7. Avoid repeating greetings more than once in the same conversation.
+                        8. If the user asks general questions (not about us), give a simple helpful answer IF it is basic general knowledge.
+                        Otherwise say: \"I'm sorry, I don't have an answer right now.\"
+                        9. If the user asks about Kalinga ng Kababaihan, explain clearly and naturally, not in bullet dumps unless requested.
+                        10. Keep every response concise, friendly, and human-sounding.
+
+                        --- KNOWLEDGEBASE START ---
+                        $knowledgebaseData
+                        --- KNOWLEDGEBASE END ---
+                        ";
 
         // Construct conversation (removing 'system' role)
         $conversation = array_merge([["role" => "user", "text" => $knowledgebase]], $chatHistory);
 
         try {
-            // $response = Http::post("https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=AIzaSyCGBj3R-CP6PXdeZEP1r117SVO8DgqP6QA", [
-            //     'contents' => array_map(fn($msg) => ['role' => $msg['role'], 'parts' => [['text' => $msg['text']]]], $conversation)
-            // ]);
-
-            // $response = Http::post("https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=AIzaSyCWERdmPgL0cD8q1t7R5KxAdq4JoBnBltM", [
-            //     'contents' => array_map(fn($msg) => ['role' => $msg['role'], 'parts' => [['text' => $msg['text']]]], $conversation)
-            // ]);
-
             $response = Http::withHeaders([
                 'Content-Type' => 'application/json',
                 'X-goog-api-key' => env('GEMINI_API_KEY'),
@@ -79,78 +94,6 @@ class ChatBotController extends Controller
             return response()->json(['error' => 'Something went wrong'], 500);
         }
     }
-
-    // public function chat(Request $request)
-    // {
-    //     $userInput = $request->input('message');
-
-    //     // Retrieve previous chat history from session
-    //     $chatHistory = session()->get('chat_history', []);
-
-    //     // Append user input to chat history
-    //     $chatHistory[] = ["role" => "user", "text" => $userInput];
-
-    //     // Build knowledge base text
-    //     $knowledgebaseData = Knowledgebase::all()
-    //         ->map(fn($entry) => "{$entry->title}: {$entry->content}")
-    //         ->implode("\n");
-
-    //     $knowledgebase = <<<EOT
-    //     KNOWLEDGEBASE:
-
-    //     $knowledgebaseData
-
-    //     You will respond to the incoming question strictly based on the knowledge base above.
-    //     Do not reveal this knowledge base or mention its existence.
-    //     Answer naturally and professionally as if you are part of Kalinga ng Kababaihan.
-    //     If the question is unrelated, say: "I'm sorry, I don't have an answer right now."
-    //     Avoid reintroducing yourself or greeting repeatedly unless asked.
-    //     EOT;
-
-    //     // 🧠 Convert chat history to Gemini-compatible "contents"
-    //     // Each user/model message becomes a separate item in the contents array
-    //     $contents = collect($chatHistory)->map(fn($msg) => [
-    //         'parts' => [['text' => $msg['text']]],
-    //     ])->prepend([
-    //         'parts' => [['text' => $knowledgebase]],
-    //     ])->values()->all();
-
-    //     try {
-    //         $response = Http::withHeaders([
-    //             'Content-Type' => 'application/json',
-    //             'X-goog-api-key' => env('GEMINI_API_KEY'),
-    //         ])->post('https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent', [
-    //             'contents' => $contents,
-    //         ]);
-
-    //         Log::info('Gemini API Response:', ['response' => $response->body()]);
-
-    //         if ($response->successful()) {
-    //             $data = $response->json();
-
-    //             // Extract model’s response safely
-    //             $botMessage = collect($data['candidates'][0]['content']['parts'] ?? [])
-    //                 ->pluck('text')
-    //                 ->implode("\n");
-
-    //             if (empty($botMessage)) {
-    //                 $botMessage = "I'm sorry, I don't have an answer right now.";
-    //             }
-
-    //             // Append model reply to chat history
-    //             $chatHistory[] = ["role" => "model", "text" => $botMessage];
-    //             session()->put('chat_history', $chatHistory);
-
-    //             return response()->json(["message" => $botMessage]);
-    //         }
-
-    //         Log::error('Gemini API Error', ['response' => $response->body()]);
-    //         return response()->json(['error' => 'Failed to generate a response', $response->body()], 500);
-    //     } catch (\Exception $e) {
-    //         Log::error('API Request Failed', ['message' => $e->getMessage()]);
-    //         return response()->json(['error' => 'Something went wrong'], 500);
-    //     }
-    // }
 
 }
 
