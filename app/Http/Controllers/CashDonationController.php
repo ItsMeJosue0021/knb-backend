@@ -223,6 +223,4 @@ class CashDonationController extends Controller
             'totalCount' => $donations->count(),
         ]);
     }
-
-
 }

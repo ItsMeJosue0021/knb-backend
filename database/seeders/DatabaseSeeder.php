@@ -9,6 +9,7 @@ use Illuminate\Database\Seeder;
 use Database\Seeders\EventsSeeder;
 use Database\Seeders\EnquirySeeder;
 use Database\Seeders\ProjectSeeder;
+use Database\Seeders\GDCategorySeeder;
 use Database\Seeders\KnowledgebaseSeeder;
 
 class DatabaseSeeder extends Seeder
@@ -27,6 +28,7 @@ class DatabaseSeeder extends Seeder
             EnquirySeeder::class,
             ProjectSeeder::class,
             EventsSeeder::class,
+            GDCategorySeeder::class,
         ]);
     }
 }

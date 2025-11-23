@@ -45,7 +45,7 @@ class GoodsDonationController extends Controller
             $query->where('year', $request->input('year'));
         }
 
-        $donations = $query->latest()->get();
+        $donations = $query->latest()->get()->loadCount('items');
 
         return response()->json($donations);
     }
@@ -158,7 +158,10 @@ class GoodsDonationController extends Controller
             $query->where('month', $month);
         }
 
-        $donations = $query->orderBy('created_at', 'desc')->get();
+        $donations = $query->with('items')
+                            ->orderBy('created_at', 'desc')
+                            ->get()
+                            ->loadCount('items');
 
         return response()->json($donations);
     }

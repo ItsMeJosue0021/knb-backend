@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\Item;
 use Illuminate\Database\Eloquent\Model;
 
 class GoodsDonation extends Model
@@ -9,7 +10,9 @@ class GoodsDonation extends Model
     protected $fillable = [
         'name', 'email', 'type', 'description', 'address', 'year', 'month', 'status'
     ];
-    protected $casts = [
-    'type' => 'array',
-];
+    protected $casts = ['type' => 'array',];
+
+    public function items() {
+        return $this->hasMany(Item::class);
+    }
 }

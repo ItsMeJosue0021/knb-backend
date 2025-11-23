@@ -4,6 +4,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\AuthController;
+use App\Http\Controllers\ItemController;
 use App\Http\Controllers\RoleController;
 use App\Http\Controllers\EmailController;
 use App\Http\Controllers\EventController;
@@ -16,6 +17,7 @@ use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\ProjectController;
 use App\Http\Controllers\AdvocacyController;
 use App\Http\Controllers\DonationController;
+use App\Http\Controllers\GDCategoryController;
 use App\Http\Controllers\CashDonationController;
 use App\Http\Controllers\GCashDonationController;
 use App\Http\Controllers\GoodsDonationController;
@@ -113,6 +115,7 @@ Route::put('/cash-donations/v2/{id}/approve', [CashDonationController::class, 'a
 Route::apiResource('goods-donations', GoodsDonationController::class);
 Route::post('/goods-donations/update/{id}', [GoodsDonationController::class, 'update']);
 
+// Goods Donation
 Route::get('/goods-donations/v2', [GoodsDonationController::class, 'all']);
 Route::get('/goods-donations/v2/filter', [GoodsDonationController::class, 'filter']);
 Route::get('/goods-donations/v2/search', [GoodsDonationController::class, 'search']);
@@ -122,6 +125,21 @@ Route::get('/goods-donations/v2/print', [GoodsDonationController::class, 'goodsD
 Route::put('/goods-donations/v2/{id}/approve', [GoodsDonationController::class, 'confirm']);
 
 
+// Get all Goods Donation Items by donation ID
+Route::get('/goods-donations/{id}/items', [  ItemController::class, 'index']);
+// Get donation item by ID
+Route::get('/goods-donations/items/{id}', [  ItemController::class, 'show']);
+// Save donation items
+Route::post('/goods-donations/{id}/items', [  ItemController::class, 'store']);
+// Update donation item by id
+Route::put('/goods-donations/items/{id}', [  ItemController::class, 'update']);
+// Delete donation item by id
+Route::delete('/goods-donations/items/{id}', [  ItemController::class, 'destroy']);
+
+
+
+// Goods Donation Categories and Subcategories
+Route::get('/goods-donation-categories', [GDCategoryController::class, 'index']);
 
 
 
