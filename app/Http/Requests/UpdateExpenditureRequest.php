@@ -29,7 +29,9 @@ class UpdateExpenditureRequest extends FormRequest
             'payment_method' => 'required|string|max:100',
             'notes' => 'nullable|string',
             'attachment' => 'nullable|file|mimes:jpg,jpeg,png,pdf|max:2048',
+            
             'items' => 'nullable|array',
+            'items.*.id' => 'sometimes|integer|exists:expenditure_items,id',
             'items.*.name' => 'required|string|max:255',
             'items.*.description' => 'nullable|string',
             'items.*.quantity' => 'required|integer|min:1',

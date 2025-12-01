@@ -52,28 +52,89 @@ class ExpenditureService {
      * @param array $data
      * @return mixed
      */
-    public function updateExpenditure(int $id, array $data) {
-        $items = $data['items'] ?? null;
+    // public function updateExpenditure(int $id, array $data) {
+    //     $items = $data['items'] ?? null;
+    //     unset($data['items']);
+
+    //     if (isset($data['attachment'])) {
+    //         $data['attachment'] = $data['attachment']->store('expenditures', 'public');
+    //     }
+
+    //     DB::transaction(function () use ($id, $data, $items) {
+    //         $expenditure = Expenditure::findOrFail($id);
+    //         $expenditure->update($data);
+
+    //         if (is_array($items)) {
+    //             // Replace existing items with the incoming set
+    //             $expenditure->items()->delete();
+    //             foreach ($items as $item) {
+    //                 if (isset($item['image'])) {
+    //                     $item['image'] = $item['image']->store('expenditure_items', 'public');
+    //                 }
+    //                 $expenditure->items()->create($item);
+    //             }
+    //         }
+    //     });
+    // }
+
+    public function updateExpenditure(int $id, array $data)
+    {
+        $incomingItems = $data['items'] ?? null;
         unset($data['items']);
 
-        if (isset($data['attachment'])) {
-            $data['attachment'] = $data['attachment']->store('expenditures', 'public');
-        }
-
-        DB::transaction(function () use ($id, $data, $items) {
+        DB::transaction(function () use ($id, $data, $incomingItems) {
             $expenditure = Expenditure::findOrFail($id);
+
+            // Only replace the main attachment if a new file was uploaded
+            if (!empty($data['attachment']) && $data['attachment'] instanceof \Illuminate\Http\UploadedFile) {
+                $data['attachment'] = $data['attachment']->store('expenditures', 'public');
+            } else {
+                unset($data['attachment']);
+            }
+
             $expenditure->update($data);
 
-            if (is_array($items)) {
-                // Replace existing items with the incoming set
-                $expenditure->items()->delete();
-                foreach ($items as $item) {
-                    if (isset($item['image'])) {
-                        $item['image'] = $item['image']->store('expenditure_items', 'public');
+            if (!is_array($incomingItems)) {
+                return;
+            }
+
+            // Track which existing items stay
+            $keptIds = [];
+
+            foreach ($incomingItems as $item) {
+                if (!empty($item['id'])) {
+                    // Update existing item
+                    $model = $expenditure->items()->where('id', $item['id'])->first();
+                    if (!$model) {
+                        continue; // skip unknown IDs
                     }
-                    $expenditure->items()->create($item);
+                    $update = [
+                        'name' => $item['name'] ?? $model->name,
+                        'description' => $item['description'] ?? null,
+                        'quantity' => $item['quantity'] ?? $model->quantity,
+                        'unit_price' => $item['unit_price'] ?? $model->unit_price,
+                    ];
+
+                    if (!empty($item['image']) && $item['image'] instanceof \Illuminate\Http\UploadedFile) {
+                        $update['image'] = $item['image']->store('expenditure_items', 'public');
+                    } // else keep existing image path
+
+                    $model->update($update);
+                    $keptIds[] = $model->id;
+                } else {
+                    // Create new item
+                    if (!empty($item['image']) && $item['image'] instanceof \Illuminate\Http\UploadedFile) {
+                        $item['image'] = $item['image']->store('expenditure_items', 'public');
+                    } else {
+                        unset($item['image']);
+                    }
+                    $created = $expenditure->items()->create($item);
+                    $keptIds[] = $created->id;
                 }
             }
+
+            // Optionally delete items not in the incoming list
+            $expenditure->items()->whereNotIn('id', $keptIds)->delete();
         });
     }
 
