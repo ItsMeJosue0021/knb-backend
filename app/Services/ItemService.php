@@ -34,6 +34,7 @@ class ItemService {
         if (isset($data['image'])) {
             $data['image'] = $data['image']->store('items', 'public');
         }
+
         $item = new Item($data);
         $donation->items()->save($item);
     }

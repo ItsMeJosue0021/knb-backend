@@ -26,6 +26,47 @@ class ProjectController extends Controller
         return response()->json($projects);
     }
 
+    public function pastProjects() {
+        $projects = Project::whereDate('date', '<', today())
+            ->orderBy('date', 'desc')
+            ->take(2)
+            ->get()
+            ->map(function ($project) {
+                return [
+                    'id' => $project->id,
+                    'title' => $project->title,
+                    'date' => $project->date,
+                    'location' => $project->location,
+                    'description' => $project->description,
+                    'tags' => $project->tags ? explode(',', $project->tags) : [],
+                    'image' => $project->image,
+                    'is_event' => $project->is_event,
+                ];
+            });
+
+        return response()->json($projects);
+    }
+
+    public function upcomingProjects() {
+        $projects = Project::whereDate('date', '>=', today())
+            ->orderBy('date', 'asc')
+            ->get()
+            ->map(function ($project) {
+                return [
+                    'id' => $project->id,
+                    'title' => $project->title,
+                    'date' => $project->date,
+                    'location' => $project->location,
+                    'description' => $project->description,
+                    'tags' => $project->tags ? explode(',', $project->tags) : [],
+                    'image' => $project->image,
+                    'is_event' => $project->is_event,
+                ];
+            });
+
+        return response()->json($projects);
+    }
+
     public function store(Request $request)
     {
 

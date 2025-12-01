@@ -18,11 +18,13 @@ use App\Http\Controllers\ProjectController;
 use App\Http\Controllers\AdvocacyController;
 use App\Http\Controllers\DonationController;
 use App\Http\Controllers\GDCategoryController;
+use App\Http\Controllers\ExpenditureController;
 use App\Http\Controllers\CashDonationController;
 use App\Http\Controllers\GCashDonationController;
 use App\Http\Controllers\GoodsDonationController;
 use App\Http\Controllers\KnowledgebaseController;
 use App\Http\Controllers\PaymentWebhookController;
+use App\Http\Controllers\ExpenditureItemController;
 use App\Http\Controllers\EmergencyContactController;
 
 Route::apiResource('roles', RoleController::class)->middleware('auth:sanctum');
@@ -61,6 +63,8 @@ Route::get('/enquiries/search', [EnquiryController::class, 'search'])->middlewar
 Route::get('/projects/search', [ProjectController::class, 'search']);
 Route::apiResource('projects', ProjectController::class);
 Route::post('/projects/update/{id}', [ProjectController::class, 'update']);
+Route::get('/upcoming-projects', [ProjectController::class, 'upcomingProjects']);
+Route::get('/past-projects', [ProjectController::class, 'pastProjects']);
 
 Route::apiResource('events', EventController::class);
 Route::post('/events/update/{id}', [EventController::class, 'update']);
@@ -137,10 +141,20 @@ Route::put('/goods-donations/items/{id}', [  ItemController::class, 'update']);
 Route::delete('/goods-donations/items/{id}', [  ItemController::class, 'destroy']);
 
 
-
 // Goods Donation Categories and Subcategories
 Route::get('/goods-donation-categories', [GDCategoryController::class, 'index']);
 
 
 
 
+
+
+// Expenditures API routes
+Route::get('/expenditures/search', [ExpenditureController::class, 'search']);
+Route::get('/expenditures/date-range', [ExpenditureController::class, 'getByDateRange']);
+Route::get('/expenditures/totals', [ExpenditureController::class, 'getTotals']);
+Route::post('/expenditures/update/{id}', [ExpenditureController::class, 'update']);
+Route::apiResource('expenditures', ExpenditureController::class);
+
+// Expenditures Items API routes
+Route::apiResource('expenditure-items', ExpenditureItemController::class);
