@@ -16,6 +16,7 @@ return new class extends Migration {
             $table->string('email')->nullable(); // to email donor
             $table->json('type');
             $table->longText('description');
+            $table->string('quantity')->nullable();
             $table->string('address');
             $table->year('year');
             $table->string('month'); // as text like "June", "July"

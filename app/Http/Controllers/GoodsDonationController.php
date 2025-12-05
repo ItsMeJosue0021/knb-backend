@@ -55,6 +55,7 @@ class GoodsDonationController extends Controller
         $validated = $request->validate([
             'type' => 'required|array',
             'description' => 'required|string',
+            'quantity' => 'nullable|string',
             'address' => 'required|string',
             'name' => 'nullable|string',
             'email' => 'nullable|email',
@@ -101,6 +102,7 @@ class GoodsDonationController extends Controller
         $validated = $request->validate([
             'type' => 'required|array',
             'description' => 'required|string',
+            'quantity' => 'nullable|string',
             'name' => 'nullable|string',
             'email' => 'nullable|email',
         ]);

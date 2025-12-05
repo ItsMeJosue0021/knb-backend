@@ -8,11 +8,20 @@ use Illuminate\Database\Eloquent\Model;
 class GoodsDonation extends Model
 {
     protected $fillable = [
-        'name', 'email', 'type', 'description', 'address', 'year', 'month', 'status'
+        'name',
+        'email',
+        'type',
+        'description',
+        'address',
+        'quantity',
+        'year',
+        'month',
+        'status'
     ];
     protected $casts = ['type' => 'array',];
 
-    public function items() {
+    public function items()
+    {
         return $this->hasMany(Item::class);
     }
 }

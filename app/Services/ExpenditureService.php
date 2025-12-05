@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Models\Expenditure;
 use App\Models\CashDonation;
 use App\Models\GCashDonation;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
 
 
@@ -52,31 +53,6 @@ class ExpenditureService {
      * @param array $data
      * @return mixed
      */
-    // public function updateExpenditure(int $id, array $data) {
-    //     $items = $data['items'] ?? null;
-    //     unset($data['items']);
-
-    //     if (isset($data['attachment'])) {
-    //         $data['attachment'] = $data['attachment']->store('expenditures', 'public');
-    //     }
-
-    //     DB::transaction(function () use ($id, $data, $items) {
-    //         $expenditure = Expenditure::findOrFail($id);
-    //         $expenditure->update($data);
-
-    //         if (is_array($items)) {
-    //             // Replace existing items with the incoming set
-    //             $expenditure->items()->delete();
-    //             foreach ($items as $item) {
-    //                 if (isset($item['image'])) {
-    //                     $item['image'] = $item['image']->store('expenditure_items', 'public');
-    //                 }
-    //                 $expenditure->items()->create($item);
-    //             }
-    //         }
-    //     });
-    // }
-
     public function updateExpenditure(int $id, array $data)
     {
         $incomingItems = $data['items'] ?? null;
@@ -115,7 +91,7 @@ class ExpenditureService {
                         'unit_price' => $item['unit_price'] ?? $model->unit_price,
                     ];
 
-                    if (!empty($item['image']) && $item['image'] instanceof \Illuminate\Http\UploadedFile) {
+                    if (!empty($item['image']) && $item['image'] instanceof UploadedFile) {
                         $update['image'] = $item['image']->store('expenditure_items', 'public');
                     } // else keep existing image path
 
@@ -123,7 +99,7 @@ class ExpenditureService {
                     $keptIds[] = $model->id;
                 } else {
                     // Create new item
-                    if (!empty($item['image']) && $item['image'] instanceof \Illuminate\Http\UploadedFile) {
+                    if (!empty($item['image']) && $item['image'] instanceof UploadedFile) {
                         $item['image'] = $item['image']->store('expenditure_items', 'public');
                     } else {
                         unset($item['image']);
