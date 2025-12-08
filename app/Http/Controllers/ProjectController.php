@@ -4,7 +4,10 @@ namespace App\Http\Controllers;
 
 use App\Models\Tag;
 use App\Models\Project;
+use App\Models\Item;
+use App\Models\ProjectResource;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 
 class ProjectController extends Controller
 {
@@ -24,6 +27,80 @@ class ProjectController extends Controller
         });
 
         return response()->json($projects);
+    }
+
+    /**
+     * Attach inventory items to a project (liquidation) and deduct from stock.
+     *
+     * Expects payload:
+     * [
+     *   { "item_id": 2, "quantity": 5 },
+     *   { "item_id": 1, "quantity": 1 }
+     * ]
+     */
+    public function attachResources(Request $request, $projectId)
+    {
+        $payload = $request->validate([
+            'items' => 'required|array|min:1',
+            'items.*.item_id' => 'required|integer|exists:items,id',
+            'items.*.quantity' => 'required|integer|min:1',
+        ]);
+
+        $items = $payload['items'];
+
+        $project = Project::findOrFail($projectId);
+
+        try {
+            DB::transaction(function () use ($items, $project) {
+                foreach ($items as $resource) {
+                    $item = Item::lockForUpdate()->findOrFail($resource['item_id']);
+
+                    if ($item->quantity < $resource['quantity']) {
+                        throw new \RuntimeException("Insufficient quantity for item {$item->id} ({$item->name}).");
+                    }
+
+                    $item->decrement('quantity', $resource['quantity']);
+
+                    ProjectResource::create([
+                        'project_id' => $project->id,
+                        'item_id' => $item->id,
+                        'quantity' => $resource['quantity'],
+                    ]);
+                }
+            });
+        } catch (\RuntimeException $e) {
+            return response()->json([
+                'message' => $e->getMessage(),
+            ], 422);
+        }
+
+        return response()->json([
+            'message' => 'Resources attached to project and inventory updated.',
+        ], 201);
+    }
+
+    /**
+     * List all resources for a project.
+     */
+    public function resources($projectId)
+    {
+        $project = Project::with(['resources.item'])->findOrFail($projectId);
+
+        $resources = $project->resources->map(function ($resource) {
+            return [
+                'id' => $resource->id,
+                'item_id' => $resource->item_id,
+                'item_name' => optional($resource->item)->name,
+                'quantity' => $resource->quantity,
+                'created_at' => $resource->created_at,
+                'updated_at' => $resource->updated_at,
+            ];
+        });
+
+        return response()->json([
+            'project_id' => $project->id,
+            'resources' => $resources,
+        ]);
     }
 
     public function pastProjects() {

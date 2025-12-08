@@ -324,6 +324,58 @@ class GoodsDonationController extends Controller
         }
     }
 
+    /**
+     * Approve a goods donation and email donor a receipt-style confirmation with items.
+     */
+    public function testConfirmation($id)
+    {
+        try {
+            $donation = GoodsDonation::with('items')->findOrFail($id);
+
+            if ($donation->status === 'approved') {
+                return response()->json([
+                    'status' => 'error',
+                    'message' => 'This donation is already approved.',
+                ], 400);
+            }
+
+            $donation->update(['status' => 'approved']);
+
+            if ($donation->email) {
+                $itemsList = $donation->items->map(function ($item) {
+                    $quantity = $item->quantity ?? 0;
+                    $unit = $item->unit ? " {$item->unit}" : '';
+                    return "- {$item->name} ({$quantity}{$unit})";
+                })->implode("\n");
+
+                $body = "Hello {$donation->name},\n\n"
+                    . "We have received your goods donation. Thank you for your generosity.\n\n"
+                    . "Items received:\n{$itemsList}\n\n"
+                    . "If anything looks incorrect, please let us know.";
+
+                Mail::raw($body, function ($message) use ($donation) {
+                    $message->to($donation->email)->subject('Goods donation received');
+                });
+            }
+
+            return response()->json([
+                'status' => 'success',
+                'message' => 'Donation approved and donor notified.',
+                'data' => $donation->fresh('items'),
+            ], 200);
+        } catch (ModelNotFoundException $e) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Donation not found.',
+            ], 404);
+        } catch (Exception $e) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'An unexpected error occurred while approving donation.',
+            ], 500);
+        }
+    }
+
     public function goodsDonations(Request $request)
     {
         $query = GoodsDonation::query();

@@ -21,6 +21,7 @@ use App\Http\Controllers\GDCategoryController;
 use App\Http\Controllers\ExpenditureController;
 use App\Http\Controllers\CashDonationController;
 use App\Http\Controllers\GCashDonationController;
+use App\Http\Controllers\GDSubcategoryController;
 use App\Http\Controllers\GoodsDonationController;
 use App\Http\Controllers\KnowledgebaseController;
 use App\Http\Controllers\PaymentWebhookController;
@@ -65,6 +66,9 @@ Route::apiResource('projects', ProjectController::class);
 Route::post('/projects/update/{id}', [ProjectController::class, 'update']);
 Route::get('/upcoming-projects', [ProjectController::class, 'upcomingProjects']);
 Route::get('/past-projects', [ProjectController::class, 'pastProjects']);
+
+Route::post('/projects/{id}/liquidate', [ProjectController::class, 'attachResources']);
+Route::get('/projects/{id}/resources', [ProjectController::class, 'resources']);
 
 Route::apiResource('events', EventController::class);
 Route::post('/events/update/{id}', [EventController::class, 'update']);
@@ -126,23 +130,28 @@ Route::get('/goods-donations/v2/search', [GoodsDonationController::class, 'searc
 Route::get('/goods-donations/v2/stats', [GoodsDonationController::class, 'stats']);
 Route::get('/goods-donations/v2/counts', [GoodsDonationController::class, 'counts']);
 Route::get('/goods-donations/v2/print', [GoodsDonationController::class, 'goodsDonations']);
-Route::put('/goods-donations/v2/{id}/approve', [GoodsDonationController::class, 'confirm']);
+Route::put('/goods-donations/v2/{id}/approve', [GoodsDonationController::class, 'testConfirmation']);
 
 
 // Get all Goods Donation Items by donation ID
-Route::get('/goods-donations/{id}/items', [  ItemController::class, 'index']);
+Route::get('/goods-donations/{id}/items', [ItemController::class, 'index']);
 // Get donation item by ID
-Route::get('/goods-donations/items/{id}', [  ItemController::class, 'show']);
+Route::get('/goods-donations/items/{id}', [ItemController::class, 'show']);
 // Save donation items
-Route::post('/goods-donations/{id}/items', [  ItemController::class, 'store']);
+Route::post('/goods-donations/{id}/items', [ItemController::class, 'store']);
 // Update donation item by id
-Route::put('/goods-donations/items/{id}', [  ItemController::class, 'update']);
+Route::put('/goods-donations/items/{id}', [ItemController::class, 'update']);
 // Delete donation item by id
-Route::delete('/goods-donations/items/{id}', [  ItemController::class, 'destroy']);
+Route::delete('/goods-donations/items/{id}', [ItemController::class, 'destroy']);
+
+Route::get('/items', [ItemController::class, 'getAllItems']);
 
 
 // Goods Donation Categories and Subcategories
 Route::get('/goods-donation-categories', [GDCategoryController::class, 'index']);
+// Goods Donation Subcategories
+Route::get('/goods-donation-subcategories', [GDSubcategoryController::class, 'index']);
+
 
 
 

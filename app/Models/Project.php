@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use App\Models\ProjectResource;
 
 class Project extends Model
 {
@@ -18,5 +19,10 @@ class Project extends Model
     public function tags()
     {
         return $this->hasMany(Tag::class);
+    }
+
+    public function resources()
+    {
+        return $this->hasMany(ProjectResource::class);
     }
 }
