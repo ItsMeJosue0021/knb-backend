@@ -16,7 +16,7 @@ class MemberSeeder extends Seeder
         Member::truncate();
 
         Member::create([
-            'member_id' => 'MEM-0001',
+            'member_number' => 'MEM-0001',
             'first_name' => 'John',
             'middle_name' => 'A.',
             'last_name' => 'Doe',
@@ -29,7 +29,7 @@ class MemberSeeder extends Seeder
         ]);
 
         Member::create([
-            'member_id' => 'MEM-0002',
+            'member_number' => 'MEM-0002',
             'first_name' => 'Jane',
             'middle_name' => 'B.',
             'last_name' => 'Smith',
@@ -42,7 +42,7 @@ class MemberSeeder extends Seeder
         ]);
 
         Member::create([
-            'member_id' => 'MEM-0003',
+            'member_number' => 'MEM-0003',
             'first_name' => 'Alice',
             'middle_name' => 'C.',
             'last_name' => 'Johnson',
@@ -55,7 +55,7 @@ class MemberSeeder extends Seeder
         ]);
 
         Member::create([
-            'member_id' => 'MEM-0004',
+            'member_number' => 'MEM-0004',
             'first_name' => 'Bob',
             'middle_name' => 'D.',
             'last_name' => 'Williams',
@@ -68,7 +68,7 @@ class MemberSeeder extends Seeder
         ]);
 
         Member::create([
-            'member_id' => 'MEM-0005',
+            'member_number' => 'MEM-0005',
             'first_name' => 'Charlie',
             'middle_name' => 'E.',
             'last_name' => 'Brown',

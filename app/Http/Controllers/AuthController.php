@@ -105,6 +105,9 @@ class AuthController extends Controller
         $data = $request->user()->load('role');
         $user = [
             'id' => $data->id,
+            'firstName' => $data->first_name,
+            'middleName' => $data->middle_name,
+            'lastName' => $data->last_name,
             'fullName' => $data->first_name . ' ' . $data->middle_name . ' ' . $data->last_name,
             'contactNumber' => $data->contact_number,
             'address' => [

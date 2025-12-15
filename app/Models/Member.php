@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\User;
 use App\Models\EmergencyContact;
 use Illuminate\Database\Eloquent\Model;
 
@@ -23,5 +24,10 @@ class Member extends Model
     public function emergencyContact()
     {
         return $this->hasOne(EmergencyContact::class);
+    }
+
+    public function user()
+    {
+        return $this->belongsTo(User::class);
     }
 }

@@ -13,7 +13,7 @@ class ProjectController extends Controller
 {
     public function index()
     {
-        $projects = Project::all()->map(function ($project) {
+        $projects = Project::latest()->get()->map(function ($project) {
             return [
                 'id' => $project->id,
                 'title' => $project->title,

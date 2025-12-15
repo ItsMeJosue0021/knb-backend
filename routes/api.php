@@ -1,5 +1,7 @@
 <?php
 
+use App\Http\Controllers\VolunteerRequestController;
+use App\Models\VolunteerRequest;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Route;
@@ -61,6 +63,8 @@ Route::put('/enquiries/{id}', [EnquiryController::class, 'update'])->middleware(
 Route::delete('/enquiries/{id}', [EnquiryController::class, 'destroy'])->middleware(['auth:sanctum', 'role:admin']);  // Delete
 Route::get('/enquiries/search', [EnquiryController::class, 'search'])->middleware(['auth:sanctum', 'role:admin']);
 
+
+// Projects
 Route::get('/projects/search', [ProjectController::class, 'search']);
 Route::apiResource('projects', ProjectController::class);
 Route::post('/projects/update/{id}', [ProjectController::class, 'update']);
@@ -69,6 +73,18 @@ Route::get('/past-projects', [ProjectController::class, 'pastProjects']);
 
 Route::post('/projects/{id}/liquidate', [ProjectController::class, 'attachResources']);
 Route::get('/projects/{id}/resources', [ProjectController::class, 'resources']);
+
+// Volunterring request
+Route::get('/volunteering-requests/', [VolunteerRequestController::class, 'index']);
+Route::get('/volunteering-requests/{requestId}/approve', [VolunteerRequestController::class, 'approve']);
+Route::get('/volunteering-requests/{requestId}/reject', [VolunteerRequestController::class, 'reject']);
+Route::get('/volunteering-requests/by-user/{userId}', [VolunteerRequestController::class, 'getRequestsByUserId']);
+Route::get('/volunteering-requests/by-project/{projectId}', [VolunteerRequestController::class, 'getApprovedByProjectId']);
+Route::post('/projects/{project_id}/volunteer', [VolunteerRequestController::class, 'volunteer']);
+Route::delete('/volunteering-requests/{project_id}', [VolunteerRequestController::class, 'destroy']);
+
+
+
 
 Route::apiResource('events', EventController::class);
 Route::post('/events/update/{id}', [EventController::class, 'update']);
@@ -151,10 +167,6 @@ Route::get('/items', [ItemController::class, 'getAllItems']);
 Route::get('/goods-donation-categories', [GDCategoryController::class, 'index']);
 // Goods Donation Subcategories
 Route::get('/goods-donation-subcategories', [GDSubcategoryController::class, 'index']);
-
-
-
-
 
 
 
