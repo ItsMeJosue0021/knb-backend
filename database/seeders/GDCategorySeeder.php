@@ -16,43 +16,82 @@ class GDCategorySeeder extends Seeder
     {
         $categories = [
             'Food' => [
-                'Canned Goods',
-                'Instant Noodles',
+                // Staples
                 'Rice',
-                'Beverages',
-                'Snacks',
-                'Condiments'
+                'Noodles & Pasta',
+                'Cooking Oil',
+                'Sugar & Salt',
+                'Flour & Baking Needs',
+
+                // Ready-to-eat / Easy to prepare
+                'Canned Goods (Sardines, Corned Beef, Meat Loaf)',
+                'Instant Noodles',
+                'Instant Meals & Ready-to-Eat Food',
+
+                // Protein
+                'Canned Fish & Meat',
+                'Dried Fish',
+                'Beans & Legumes',
+
+                // Beverages
+                'Coffee',
+                'Powdered Drinks',
+                'Juice & Canned Drinks',
+
+                // Others
+                'Snacks & Biscuits',
+                'Condiments & Seasonings',
+                'Baby Food & Formula'
             ],
 
-            'Clothes' => [
-                'Men',
-                'Women',
-                'Children',
+            'Clothings' => [
+                // Adult Clothing
+                'Men – Tops',
+                'Men – Bottoms',
+                'Women – Tops',
+                'Women – Bottoms',
+
+                // Children
+                'Children – Infants (0–2 yrs)',
+                'Children – Toddlers (3–5 yrs)',
+                'Children – Kids (6–12 yrs)',
+
+                // Special Use
+                'School Uniforms',
+                'Jackets & Sweaters',
+                'Sleepwear',
+
+                // Footwear & Accessories
                 'Footwear',
-                'Bedding'
+                'Undergarments',
+                'Bags & Belts',
+
+                // Household Textile
+                'Bedding (Blankets, Bedsheets)',
+                'Towels'
             ],
 
             'School Supplies' => [
-                'Paper Products',
-                'Writing Tools',
-                'Bags',
-                'Art Materials'
-            ],
+                // Writing & Paper
+                'Notebooks',
+                'Writing Tools (Pens, Pencils)',
+                'Paper Products (Bond Paper, Pad Paper)',
 
-            'Hygiene Products' => [
-                'Soap',
-                'Shampoo',
-                'Sanitary Pads',
-                'Toothpaste',
-                'Toothbrush'
-            ],
+                // School Gear
+                'School Bags',
+                'Lunch Boxes',
+                'Water Bottles',
 
-            'Medicine' => [
-                'OTC Medicines',
-                'Vitamins',
-                'First Aid Items'
+                // Art & Learning
+                'Art Materials (Crayons, Coloring Materials)',
+                'Learning Materials (Books, Workbooks)',
+
+                // Miscellaneous
+                'School Kits (Pre-packed Sets)',
+                'Teaching Supplies'
             ],
         ];
+
 
         foreach ($categories as $categoryName => $subcategories) {
             // Create category
