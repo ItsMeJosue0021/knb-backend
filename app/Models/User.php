@@ -37,6 +37,7 @@ class User extends Authenticatable
         'email',
         'image',
         'password',
+        'is_archived',
         'role_id',
     ];
 

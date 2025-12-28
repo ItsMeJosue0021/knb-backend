@@ -20,6 +20,7 @@ use App\Http\Controllers\ProjectController;
 use App\Http\Controllers\AdvocacyController;
 use App\Http\Controllers\DonationController;
 use App\Http\Controllers\GDCategoryController;
+use App\Http\Controllers\MembershipRequestController;
 use App\Http\Controllers\ExpenditureController;
 use App\Http\Controllers\CashDonationController;
 use App\Http\Controllers\GCashDonationController;
@@ -37,12 +38,22 @@ Route::post('/login', [AuthController::class, 'login'])->name('login');
 Route::post('/logout', [AuthController::class, 'logout'])->middleware('auth:sanctum');
 Route::get('/user', [AuthController::class, 'user'])->middleware('auth:sanctum');
 Route::get('users', [AuthController::class, 'users'])->middleware('auth:sanctum');
+Route::get('/users/print', [AuthController::class, 'printUsers'])->middleware('auth:sanctum');
 Route::put('/users/{id}', [AuthController::class, 'update'])->middleware('auth:sanctum');
 Route::delete('/users/{id}', [AuthController::class, 'destroy'])->middleware('auth:sanctum');
+
+Route::post('/archived-users/restore/{id}', [AuthController::class, 'restore'])->middleware('auth:sanctum');
+Route::get('/archived-users', [AuthController::class, 'archivedUsers'])->middleware('auth:sanctum');
 
 Route::post('/users/change-password/{id}', [ProfileController::class, 'changePassword'])->middleware('auth:sanctum');
 Route::post('/users/profile-update/{id}', [ProfileController::class, 'update'])->middleware('auth:sanctum');
 Route::post('/users/profile-picture/{id}', [ProfileController::class, 'uploadProfilePicture'])->middleware('auth:sanctum');
+
+Route::get('/membership-requests', [MembershipRequestController::class, 'index'])->middleware('auth:sanctum');
+Route::post('/membership-requests', [MembershipRequestController::class, 'store'])->middleware('auth:sanctum');
+Route::post('/membership-requests/{id}/approve', [MembershipRequestController::class, 'approve'])->middleware('auth:sanctum');
+Route::post('/membership-requests/{id}/reject', [MembershipRequestController::class, 'reject'])->middleware('auth:sanctum');
+
 
 Route::post('chat', [ChatBotController::class, 'chat']);
 

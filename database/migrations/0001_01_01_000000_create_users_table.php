@@ -29,6 +29,7 @@ return new class extends Migration {
             $table->string('email')->unique();
             $table->timestamp('email_verified_at')->nullable();
             $table->string('password');
+            $table->boolean('is_archived')->default(false);
             $table->foreignIdFor(Role::class)->constrained();
             $table->rememberToken();
             $table->timestamps();

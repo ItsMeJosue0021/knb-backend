@@ -4,11 +4,21 @@ namespace App\Http\Controllers;
 
 use App\Models\User;
 use Illuminate\Http\Request;
+use Psy\Exception\Exception;
+use App\Services\UserService;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Hash;
+use Barryvdh\DomPDF\Facade\Pdf;
 
 class AuthController extends Controller
 {
+
+    protected UserService $userService;
+
+    public function __construct(UserService $userService)
+    {
+        $this->userService = $userService;
+    }
     /**
      * Registers a new user.
      */
@@ -69,7 +79,9 @@ class AuthController extends Controller
             'password' => 'required',
         ]);
 
-        $user = User::where('email', $request->email)->first();
+        $user = User::where('email', $request->email)
+            ->where('is_archived', false)
+            ->first();
 
         if (!$user || !Hash::check($request->password, $user->password)) {
             Log::info("User login failed: " . ($user->email ?? 'unknown'));
@@ -97,42 +109,68 @@ class AuthController extends Controller
     }
 
     /**
-     * Returns the authenticated user.
+     * Summary of user
+     * @param Request $request
+     * @return \Illuminate\Http\JsonResponse|\Illuminate\Http\Response
      */
     public function user(Request $request)
     {
-
-        $data = $request->user()->load('role');
-        $user = [
-            'id' => $data->id,
-            'firstName' => $data->first_name,
-            'middleName' => $data->middle_name,
-            'lastName' => $data->last_name,
-            'fullName' => $data->first_name . ' ' . $data->middle_name . ' ' . $data->last_name,
-            'contactNumber' => $data->contact_number,
-            'address' => [
-                'block' => $data->block,
-                'lot' => $data->lot,
-                'street' => $data->steet,
-                'subdivision' => $data->dubdivision,
-                'barangay' => $data->baranggy,
-                'city' => $data->city,
-                'province' => $data->province,
-                'code' => $data->code,
-            ],
-            'username' => $data->username,
-            'email' => $data->email,
-            'role' => $data->role->name,
-            'image' => $data->image ?? null,
-        ];
-
-
-        return response(['user' => $user], 200);
+        try {
+            $user = $this->userService->getLoggedInUser($request);
+            return response(['user' => $user], 200);
+        } catch (Exception $e) {
+            return response()->json([
+                'message' => "Unable to fetch user's data.",
+            ], 500);
+        }
     }
 
-    public function users()
+    /**
+     * Summary of users
+     * @return \Illuminate\Http\Response
+     */
+    public function users(Request $request)
     {
-        return response(['users' => User::all()], 200);
+        $searchTerm = $request->input('serach', $request->input('search'));
+
+        return response([
+            'users' => $this->userService->getAllUsers($searchTerm)
+        ], 200);
+    }
+
+    /**
+     * Returns all archived users.
+     */
+    public function archivedUsers(Request $request)
+    {
+        $searchTerm = $request->input('serach', $request->input('search'));
+
+        return response([
+            'users' => $this->userService->getArchivedUsers($searchTerm)
+        ], 200);
+    }
+
+    /**
+     * Streams a PDF listing of all active users.
+     */
+    public function printUsers()
+    {
+        try {
+            $users = $this->userService->getAllUsers()->load('role');
+
+            $pdf = Pdf::loadView('users.report', [
+                'users' => $users,
+                'generatedAt' => now(),
+            ])->setPaper('a4', 'landscape');
+
+            return $pdf->stream('users.pdf');
+        } catch (Exception $e) {
+            Log::error('Failed to generate users PDF', ['error' => $e->getMessage()]);
+
+            return response()->json([
+                'message' => 'Unable to generate users PDF.',
+            ], 500);
+        }
     }
 
     public function update(Request $request, $id)
@@ -145,34 +183,59 @@ class AuthController extends Controller
             'password' => 'nullable|min:6',
         ]);
 
-        // Check if a password is provided
         if ($request->filled('password')) {
-            // Compare new password with the existing one
             if (!Hash::check($request->password, $user->password)) {
-                // If they are different, hash and update it
                 $validatedData['password'] = Hash::make($request->password);
             } else {
-                // If the same, remove password from the update data
                 unset($validatedData['password']);
             }
         } else {
-            // If no password is provided, remove it from update data
             unset($validatedData['password']);
         }
 
-        // Update user data
         $user->update($validatedData);
 
         return response()->json(['message' => 'User updated successfully', 'user' => $user]);
     }
 
-    // Delete user
+    /**
+     * Summary of destroy
+     * @param mixed $id
+     * @return \Illuminate\Http\JsonResponse
+     */
     public function destroy($id)
     {
-        $user = User::findOrFail($id);
-        $user->delete();
-
-        return response()->json(['message' => 'User deleted successfully']);
+        try {
+            $this->userService->delete($id);
+            return response()->json([
+                'message' => 'User deleted successfully'
+            ], 200);
+        } catch (Exception $e) {
+            return response()->json([
+                'message' => $e->getMessage(),
+            ], 500);
+        }
     }
 
+    /**
+     * Restores an archived user.
+     *
+     * @param mixed $id
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function restore($id)
+    {
+        try {
+            $user = $this->userService->restore($id);
+
+            return response()->json([
+                'message' => 'User restored successfully',
+                'user' => $user,
+            ], 200);
+        } catch (Exception $e) {
+            return response()->json([
+                'message' => $e->getMessage(),
+            ], 500);
+        }
+    }
 }
