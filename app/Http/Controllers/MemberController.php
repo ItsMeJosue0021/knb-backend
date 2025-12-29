@@ -132,7 +132,15 @@ class MemberController extends Controller
             'relationship' => $request->input('cp_relationship'),
         ];
 
-        $emergencyContact = $this->emergencyContactService->updateEmergencyContact($member->emergencyContact->id, $emergencyContactData);
+        $existingEmergencyContact = $member->emergencyContact;
+        if ($existingEmergencyContact) {
+            $emergencyContact = $this->emergencyContactService->updateEmergencyContact($existingEmergencyContact->id, $emergencyContactData);
+        } else {
+            $emergencyContact = $this->emergencyContactService->createEmergencyContact(array_merge(
+                ['member_id' => $member->id],
+                $emergencyContactData
+            ));
+        }
         if (!$emergencyContact) {
             return response()->json(['message' => 'Failed to save contact person'], 500);
         }
