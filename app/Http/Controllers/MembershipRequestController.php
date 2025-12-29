@@ -32,6 +32,21 @@ class MembershipRequestController extends Controller
     }
 
     /**
+     * Get the current user's membership request if it exists.
+     * @param Request $request
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function myRequest(Request $request)
+    {
+        $membershipRequest = $this->membershipService->getByUser($request->user()->id);
+
+        return response()->json([
+            'message' => $membershipRequest ? 'Membership request found.' : 'No membership request found.',
+            'request' => $membershipRequest,
+        ], $membershipRequest ? 200 : 404);
+    }
+
+    /**
      * Create a new membership request.
      * @param SaveMembershipRequest $request
      * @return \Illuminate\Http\JsonResponse

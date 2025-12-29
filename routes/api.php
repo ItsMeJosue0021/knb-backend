@@ -50,6 +50,7 @@ Route::post('/users/profile-update/{id}', [ProfileController::class, 'update'])-
 Route::post('/users/profile-picture/{id}', [ProfileController::class, 'uploadProfilePicture'])->middleware('auth:sanctum');
 
 Route::get('/membership-requests', [MembershipRequestController::class, 'index'])->middleware('auth:sanctum');
+Route::get('/membership-requests/me', [MembershipRequestController::class, 'myRequest'])->middleware('auth:sanctum');
 Route::post('/membership-requests', [MembershipRequestController::class, 'store'])->middleware('auth:sanctum');
 Route::post('/membership-requests/{id}/approve', [MembershipRequestController::class, 'approve'])->middleware('auth:sanctum');
 Route::post('/membership-requests/{id}/reject', [MembershipRequestController::class, 'reject'])->middleware('auth:sanctum');

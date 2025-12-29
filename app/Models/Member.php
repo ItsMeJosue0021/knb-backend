@@ -10,6 +10,7 @@ class Member extends Model
 {
     protected $fillable = [
         'member_id',
+        'member_number',
         'first_name',
         'middle_name',
         'last_name',
@@ -18,7 +19,9 @@ class Member extends Model
         'dob',
         'civil_status',
         'contact_number',
-        'fb_messenger_account'
+        'fb_messenger_account',
+        'status',
+        'user_id',
     ];
 
     public function emergencyContact()

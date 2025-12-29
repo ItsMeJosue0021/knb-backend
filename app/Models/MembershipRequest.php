@@ -2,7 +2,7 @@
 
 namespace App\Models;
 
-use Workbench\App\Models\User;
+use App\Models\User;
 use Illuminate\Database\Eloquent\Model;
 
 class MembershipRequest extends Model
