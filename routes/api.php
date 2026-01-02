@@ -30,6 +30,10 @@ use App\Http\Controllers\KnowledgebaseController;
 use App\Http\Controllers\PaymentWebhookController;
 use App\Http\Controllers\ExpenditureItemController;
 use App\Http\Controllers\EmergencyContactController;
+use App\Http\Controllers\FaqsController;
+use App\Http\Controllers\HomepageInfoController;
+use App\Http\Controllers\ContactInfoController;
+use App\Http\Controllers\OfficersController;
 
 Route::apiResource('roles', RoleController::class)->middleware('auth:sanctum');
 
@@ -63,6 +67,22 @@ Route::get('/knowledgebase', [KnowledgebaseController::class, 'getAll'])->middle
 Route::put('/knowledgebase/{id}', [KnowledgebaseController::class, 'update'])->middleware(['auth:sanctum', 'role:admin']);
 Route::delete('/knowledgebase/{id}', [KnowledgebaseController::class, 'destroy'])->middleware(['auth:sanctum', 'role:admin']);
 Route::get('/knowledgebase/search', [KnowledgebaseController::class, 'search']);
+
+Route::get('/contact-info', [ContactInfoController::class, 'show']);
+Route::put('/contact-info', [ContactInfoController::class, 'update'])->middleware(['auth:sanctum', 'role:admin']);
+
+Route::get('/homepage-info', [HomepageInfoController::class, 'show']);
+Route::put('/homepage-info', [HomepageInfoController::class, 'update'])->middleware(['auth:sanctum', 'role:admin']);
+
+Route::get('/officers', [OfficersController::class, 'index']);
+Route::post('/officers', [OfficersController::class, 'store'])->middleware(['auth:sanctum', 'role:admin']);
+Route::put('/officers/{id}', [OfficersController::class, 'update'])->middleware(['auth:sanctum', 'role:admin']);
+Route::delete('/officers/{id}', [OfficersController::class, 'destroy'])->middleware(['auth:sanctum', 'role:admin']);
+
+Route::get('/faqs', [FaqsController::class, 'index']);
+Route::post('/faqs', [FaqsController::class, 'store'])->middleware(['auth:sanctum', 'role:admin']);
+Route::put('/faqs/{id}', [FaqsController::class, 'update'])->middleware(['auth:sanctum', 'role:admin']);
+Route::delete('/faqs/{id}', [FaqsController::class, 'destroy'])->middleware(['auth:sanctum', 'role:admin']);
 
 Route::get('members/search', [MemberController::class, 'search'])->middleware(['auth:sanctum', 'role:admin']);
 Route::apiResource('members', MemberController::class)->middleware(['auth:sanctum', 'role:admin']);
