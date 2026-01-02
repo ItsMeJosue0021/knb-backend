@@ -34,6 +34,7 @@ use App\Http\Controllers\FaqsController;
 use App\Http\Controllers\HomepageInfoController;
 use App\Http\Controllers\ContactInfoController;
 use App\Http\Controllers\OfficersController;
+use App\Http\Controllers\GroqChatController;
 
 Route::apiResource('roles', RoleController::class)->middleware('auth:sanctum');
 
@@ -60,7 +61,8 @@ Route::post('/membership-requests/{id}/approve', [MembershipRequestController::c
 Route::post('/membership-requests/{id}/reject', [MembershipRequestController::class, 'reject'])->middleware('auth:sanctum');
 
 
-Route::post('chat', [ChatBotController::class, 'chat']);
+Route::post('chat', [GroqChatController::class, 'chat']);
+// Route::post('chat-groq', [GroqChatController::class, 'chat']);
 
 Route::post('/knowledgebase', [KnowledgebaseController::class, 'store'])->middleware(['auth:sanctum', 'role:admin']);
 Route::get('/knowledgebase', [KnowledgebaseController::class, 'getAll'])->middleware(['auth:sanctum', 'role:admin']);
