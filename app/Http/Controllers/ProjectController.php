@@ -124,8 +124,18 @@ class ProjectController extends Controller
         return response()->json($projects);
     }
 
-    public function upcomingProjects() {
+    public function upcomingProjects(Request $request) {
+        $search = $request->input('search');
+
         $projects = Project::whereDate('date', '>=', today())
+            ->when($search, function ($query) use ($search) {
+                $query->where(function ($q) use ($search) {
+                    $q->where('title', 'like', "%{$search}%")
+                        ->orWhere('description', 'like', "%{$search}%")
+                        ->orWhere('location', 'like', "%{$search}%")
+                        ->orWhere('tags', 'like', "%{$search}%");
+                });
+            })
             ->orderBy('date', 'asc')
             ->get()
             ->map(function ($project) {
