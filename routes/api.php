@@ -172,6 +172,7 @@ Route::put('/cash-donations/v2/{id}/approve', [CashDonationController::class, 'a
 
 Route::apiResource('goods-donations', GoodsDonationController::class);
 Route::post('/goods-donations/update/{id}', [GoodsDonationController::class, 'update']);
+Route::put('/goods-donations/{id}/name-description', [GoodsDonationController::class, 'updateNameOrDescription']);
 
 // Goods Donation
 Route::get('/goods-donations/v2', [GoodsDonationController::class, 'all']);

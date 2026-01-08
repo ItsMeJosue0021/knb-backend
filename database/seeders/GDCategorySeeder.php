@@ -19,9 +19,6 @@ class GDCategorySeeder extends Seeder
                 // Staples
                 'Rice',
                 'Noodles & Pasta',
-                'Cooking Oil',
-                'Sugar & Salt',
-                'Flour & Baking Needs',
 
                 // Ready-to-eat / Easy to prepare
                 'Canned Goods (Sardines, Corned Beef, Meat Loaf)',
@@ -30,8 +27,6 @@ class GDCategorySeeder extends Seeder
 
                 // Protein
                 'Canned Fish & Meat',
-                'Dried Fish',
-                'Beans & Legumes',
 
                 // Beverages
                 'Coffee',
@@ -40,7 +35,6 @@ class GDCategorySeeder extends Seeder
 
                 // Others
                 'Snacks & Biscuits',
-                'Condiments & Seasonings',
                 'Baby Food & Formula'
             ],
 
@@ -80,7 +74,6 @@ class GDCategorySeeder extends Seeder
                 // School Gear
                 'School Bags',
                 'Lunch Boxes',
-                'Water Bottles',
 
                 // Art & Learning
                 'Art Materials (Crayons, Coloring Materials)',

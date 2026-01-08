@@ -5,6 +5,9 @@ namespace App\Http\Controllers;
 use Exception;
 use Illuminate\Http\Request;
 use App\Models\GoodsDonation;
+use App\Http\Requests\EditGDNameOrDescription;
+use App\Services\GoodsDonationService;
+use App\Services\ItemService;
 use Illuminate\Support\Facades\DB;
 use App\Http\Controllers\Controller;
 use Illuminate\Support\Facades\Mail;
@@ -12,6 +15,14 @@ use Illuminate\Database\Eloquent\ModelNotFoundException;
 
 class GoodsDonationController extends Controller
 {
+
+    protected GoodsDonationService $goodsDonationService;
+
+    public function __construct(GoodsDonationService $goodsDonationService)
+    {
+        $this->goodsDonationService = $goodsDonationService;
+    }
+
     // public function index()
     // {
     //     $donations = GoodsDonation::all();
@@ -49,22 +60,38 @@ class GoodsDonationController extends Controller
 
         return response()->json($donations);
     }
-
-    public function store(Request $request)
+    public function store(Request $request, ItemService $itemService)
     {
         $validated = $request->validate([
-            'type' => 'required|array',
-            'description' => 'required|string',
+            'type' => 'nullable|array',
+            'description' => 'nullable|string',
             'quantity' => 'nullable|string',
             'address' => 'required|string',
             'name' => 'nullable|string',
             'email' => 'nullable|email',
+            'items' => 'nullable|array',
+            'items.*.name' => 'required|string|max:255',
+            'items.*.category' => 'required|integer|exists:g_d_categories,id',
+            'items.*.sub_category' => 'required|integer|exists:g_d_subcategories,id',
+            'items.*.quantity' => 'required|integer|min:1',
+            'items.*.unit' => 'nullable|string|max:50',
+            'items.*.notes' => 'nullable|string',
+            'items.*.image' => 'nullable|image|mimes:jpeg,jpg,png,webp|max:2048',
         ]);
 
+        $items = $validated['items'] ?? [];
+        unset($validated['items']);
+
+        $validated['type'] = $validated['type'] ?? [];
+        $validated['description'] = $validated['description'] ?? '';
         $validated['year'] = now()->year;
         $validated['month'] = now()->format('F');
 
         $donation = GoodsDonation::create($validated);
+
+        foreach ($items as $itemData) {
+            $itemService->saveItems($donation->id, $itemData);
+        }
 
         $types = implode(', ', $donation->type);
 
@@ -114,6 +141,16 @@ class GoodsDonationController extends Controller
             'data' => $donation
         ]);
 
+    }
+
+    public function updateNameOrDescription(EditGDNameOrDescription $request, $id)
+    {
+        $donation = $this->goodsDonationService->updateNameOrDescription($id, $request->validated());
+
+        return response()->json([
+            'message' => 'Donation updated successfully.',
+            'data' => $donation
+        ]);
     }
 
     public function show($id)
