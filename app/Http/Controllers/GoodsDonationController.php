@@ -23,12 +23,6 @@ class GoodsDonationController extends Controller
         $this->goodsDonationService = $goodsDonationService;
     }
 
-    // public function index()
-    // {
-    //     $donations = GoodsDonation::all();
-    //     return response()->json($donations);
-    // }
-
     public function index(Request $request)
     {
         $query = GoodsDonation::query();
@@ -377,6 +371,8 @@ class GoodsDonationController extends Controller
             }
 
             $donation->update(['status' => 'approved']);
+            $donation->items()->update(['is_confirmed' => true]);
+
 
             if ($donation->email) {
                 $itemsList = $donation->items->map(function ($item) {

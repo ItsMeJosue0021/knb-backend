@@ -14,8 +14,8 @@ return new class extends Migration {
             $table->id();
             $table->string('name')->nullable(); // optional
             $table->string('email')->nullable(); // to email donor
-            $table->json('type');
-            $table->longText('description');
+            $table->json('type')->nullable(); // goods donation type(s)
+            $table->longText('description')->nullable();
             $table->string('quantity')->nullable();
             $table->string('address');
             $table->year('year');

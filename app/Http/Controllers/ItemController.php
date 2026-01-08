@@ -32,6 +32,19 @@ class ItemController extends Controller
         ], 200);
     }
 
+
+    /**
+     * Returns confirmed items, optionally filtered by search term.
+     */
+    public function confirmedItems(Request $request)
+    {
+        return response([
+            'items' => $this->itemService->getConfirmedItems([
+                'search' => $request->query('search', '')
+            ])
+        ], 200);
+    }
+
     /**
      * Determine if the user is authorized to make this request.
      */

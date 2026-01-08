@@ -58,6 +58,51 @@ class ItemService
 
     }
 
+    public function getConfirmedItems(array $filters = [])
+    {
+        $items = Item::with([
+            'categoryModel:id,name',
+            'subCategoryModel:id,name'
+        ])
+            ->where('is_confirmed', true)
+            ->when(isset($filters['search']) && $filters['search'] !== '', function ($query) use ($filters) {
+                $search = $filters['search'];
+                $query->where(function ($sub) use ($search) {
+                    $sub->where('name', 'like', "%{$search}%")
+                        ->orWhere('notes', 'like', "%{$search}%")
+                        ->orWhereHas('categoryModel', function ($categoryQuery) use ($search) {
+                            $categoryQuery->where('name', 'like', "%{$search}%");
+                        })
+                        ->orWhereHas('subCategoryModel', function ($subcategoryQuery) use ($search) {
+                            $subcategoryQuery->where('name', 'like', "%{$search}%");
+                        });
+                });
+            })
+            ->orderBy('goods_donation_id')
+            ->orderByDesc('created_at')
+            ->get();
+
+        return $items->map(function ($item) {
+            return [
+                'id' => $item->id,
+                'goods_donation_id' => $item->goods_donation_id,
+                'name' => $item->name,
+                'image' => $item->image,
+                'category' => $item->category,
+                'category_name' => optional($item->categoryModel)->name,
+                'sub_category' => $item->sub_category,
+                'sub_category_name' => optional($item->subCategoryModel)->name,
+                'quantity' => $item->quantity,
+                'status' => $item->quantity > 0 ? 'available' : 'consumed',
+                'unit' => $item->unit,
+                'notes' => $item->notes,
+                'created_at' => $item->created_at,
+                'updated_at' => $item->updated_at,
+            ];
+        });
+    }
+
+
     /**
      * Service function for retrieving items by id
      *

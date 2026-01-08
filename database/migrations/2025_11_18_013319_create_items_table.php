@@ -22,6 +22,7 @@ return new class extends Migration
             $table->integer('quantity');
             $table->string('unit')->nullable();
             $table->longText('notes')->nullable();
+            $table->boolean('is_confirmed')->default(false);
             $table->timestamps();
         });
     }

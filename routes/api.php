@@ -196,6 +196,7 @@ Route::put('/goods-donations/items/{id}', [ItemController::class, 'update']);
 Route::delete('/goods-donations/items/{id}', [ItemController::class, 'destroy']);
 
 Route::get('/items', [ItemController::class, 'getAllItems']);
+Route::get('/items/confirmed', [ItemController::class, 'confirmedItems']);
 
 
 // Goods Donation Categories and Subcategories
