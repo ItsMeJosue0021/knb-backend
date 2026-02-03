@@ -11,13 +11,9 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('contact_infos', function (Blueprint $table) {
+        Schema::create('carousel_images', function (Blueprint $table) {
             $table->id();
-            $table->string('telephone_number')->nullable();
-            $table->string('phone_number')->nullable();
-            $table->string('email_address')->nullable();
-            $table->string('physical_address')->nullable();
-            $table->string('image')->nullable();
+            $table->string('image_path');
             $table->timestamps();
         });
     }
@@ -27,6 +23,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('contact_infos');
+        Schema::dropIfExists('carousel_images');
     }
 };

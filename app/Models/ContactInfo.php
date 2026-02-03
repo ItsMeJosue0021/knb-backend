@@ -10,6 +10,7 @@ class ContactInfo extends Model
         'telephone_number',
         'phone_number',
         'email_address',
-        'physical_address'
+        'physical_address',
+        'image',
     ];
 }

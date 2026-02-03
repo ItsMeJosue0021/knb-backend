@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use App\Models\ContactInfo;
+use Illuminate\Support\Facades\Storage;
 
 class ContactInfoController extends Controller
 {
@@ -28,9 +29,18 @@ class ContactInfoController extends Controller
             'phone_number' => 'nullable|string',
             'email_address' => 'nullable|email',
             'physical_address' => 'nullable|string',
+            'image' => 'nullable|image|mimes:jpeg,png,jpg,gif,webp|max:2048',
         ]);
 
         $info = ContactInfo::first();
+
+        if ($info && $request->hasFile('image') && $info->image) {
+            Storage::disk('public')->delete($info->image);
+        }
+
+        if ($request->hasFile('image')) {
+            $validated['image'] = $request->file('image')->store('contact_info', 'public');
+        }
 
         if ($info) {
             $info->update($validated);

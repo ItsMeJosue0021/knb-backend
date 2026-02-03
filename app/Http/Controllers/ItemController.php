@@ -8,6 +8,7 @@ use App\Services\ItemService;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\SaveItemsRequest;
 use App\Http\Requests\UpdateItemRequest;
+use Barryvdh\DomPDF\Facade\Pdf;
 
 class ItemController extends Controller
 {
@@ -38,11 +39,43 @@ class ItemController extends Controller
      */
     public function confirmedItems(Request $request)
     {
+        $request->validate([
+            'start_date' => 'nullable|date',
+            'end_date' => 'nullable|date|after_or_equal:start_date',
+        ]);
+
         return response([
             'items' => $this->itemService->getConfirmedItems([
-                'search' => $request->query('search', '')
+                'search' => $request->query('search', ''),
+                'start_date' => $request->query('start_date'),
+                'end_date' => $request->query('end_date'),
             ])
         ], 200);
+    }
+
+    public function printConfirmedItems(Request $request)
+    {
+        $request->validate([
+            'start_date' => 'nullable|date',
+            'end_date' => 'nullable|date|after_or_equal:start_date',
+        ]);
+
+        $startDate = $request->query('start_date');
+        $endDate = $request->query('end_date');
+
+        $items = $this->itemService->getConfirmedItems([
+            'start_date' => $startDate,
+            'end_date' => $endDate,
+        ]);
+
+        $pdf = Pdf::loadView('items.confirmed-report', [
+            'items' => $items,
+            'generatedAt' => now(),
+            'startDate' => $startDate,
+            'endDate' => $endDate,
+        ])->setPaper('a4', 'portrait');
+
+        return $pdf->stream('confirmed-items.pdf');
     }
 
     /**

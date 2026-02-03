@@ -16,6 +16,7 @@ class GoodsDonation extends Model
         'quantity',
         'year',
         'month',
+        'reject_reason',
         'status'
     ];
     protected $casts = ['type' => 'array',];

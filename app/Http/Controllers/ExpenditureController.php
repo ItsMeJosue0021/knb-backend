@@ -8,6 +8,8 @@ use App\Http\Requests\UpdateExpenditureRequest;
 use App\Services\ExpenditureService;
 use Illuminate\Http\Request;
 use Exception;
+use App\Models\Expenditure;
+use Barryvdh\DomPDF\Facade\Pdf;
 
 class ExpenditureController extends Controller
 {
@@ -22,9 +24,27 @@ class ExpenditureController extends Controller
      * Retrieve all expenditures
      * @return mixed
      */
-    public function index() {
+    public function index(Request $request) {
+        $request->validate([
+            'start_date' => 'nullable|date',
+            'end_date' => 'nullable|date|after_or_equal:start_date',
+        ]);
+
+        $startDate = $request->query('start_date');
+        $endDate = $request->query('end_date');
+
+        $expenditures = Expenditure::with('items')
+            ->when($startDate, function ($query) use ($startDate) {
+                $query->whereDate('date_incurred', '>=', $startDate);
+            })
+            ->when($endDate, function ($query) use ($endDate) {
+                $query->whereDate('date_incurred', '<=', $endDate);
+            })
+            ->latest()
+            ->get();
+
         return response([
-            'expenditures' => $this->expenditureService->getAllExpenditures()
+            'expenditures' => $expenditures
         ], 200);
     }
 
@@ -122,6 +142,52 @@ class ExpenditureController extends Controller
         $results = $this->expenditureService->searchExpenditures($term);
 
         return response(['expenditures' => $results], 200);
+    }
+
+    public function print(Request $request)
+    {
+        $request->validate([
+            'start_date' => 'nullable|date',
+            'end_date' => 'nullable|date|after_or_equal:start_date',
+        ]);
+
+        $startDate = $request->query('start_date');
+        $endDate = $request->query('end_date');
+
+        $expenditures = Expenditure::query()
+            ->when($startDate, function ($query) use ($startDate) {
+                $query->whereDate('date_incurred', '>=', $startDate);
+            })
+            ->when($endDate, function ($query) use ($endDate) {
+                $query->whereDate('date_incurred', '<=', $endDate);
+            })
+            ->orderBy('date_incurred', 'desc')
+            ->get();
+
+        $pdf = Pdf::loadView('expenditures.report', [
+            'expenditures' => $expenditures,
+            'generatedAt' => now(),
+            'startDate' => $startDate,
+            'endDate' => $endDate,
+        ])->setPaper('a4', 'portrait');
+
+        return $pdf->stream('expenditures.pdf');
+    }
+
+    public function printExpenditure(int $id)
+    {
+        $expenditure = Expenditure::with('items')->findOrFail($id);
+
+        $pdf = Pdf::loadView('expenditures.single-report', [
+            'expenditure' => $expenditure,
+            'items' => $expenditure->items,
+            'generatedAt' => now(),
+        ])->setPaper('a4', 'portrait');
+
+        $safeRef = preg_replace('/[^A-Za-z0-9_-]+/', '-', $expenditure->reference_number ?? 'expense');
+        $fileName = 'expenditure-' . $expenditure->id . '-' . $safeRef . '.pdf';
+
+        return $pdf->stream($fileName);
     }
 
 

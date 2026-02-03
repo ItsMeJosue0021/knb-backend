@@ -12,6 +12,9 @@ use Illuminate\Support\Facades\DB;
 use App\Http\Controllers\Controller;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
+use App\Models\ContactInfo;
+use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Log;
 
 class GoodsDonationController extends Controller
 {
@@ -70,6 +73,7 @@ class GoodsDonationController extends Controller
             'items.*.quantity' => 'required|integer|min:1',
             'items.*.unit' => 'nullable|string|max:50',
             'items.*.notes' => 'nullable|string',
+            'items.*.expiry_date' => 'nullable|date',
             'items.*.image' => 'nullable|image|mimes:jpeg,jpg,png,webp|max:2048',
         ]);
 
@@ -409,6 +413,89 @@ class GoodsDonationController extends Controller
         }
     }
 
+    /**
+     * Reject a goods donation and notify the donor with next steps.
+     */
+    public function reject(Request $request, $id)
+    {
+        try {
+            $validated = $request->validate([
+                'reason' => 'nullable|string',
+            ]);
+
+            $donation = GoodsDonation::findOrFail($id);
+
+            if ($donation->status === 'rejected') {
+                return response()->json([
+                    'status' => 'error',
+                    'message' => 'This donation is already rejected.',
+                ], 400);
+            }
+
+            if ($donation->status === 'approved') {
+                return response()->json([
+                    'status' => 'error',
+                    'message' => 'This donation is already approved.',
+                ], 400);
+            }
+
+            $donation->update(attributes: [
+                'status' => 'rejected',
+                'reject_reason' => $validated['reason'] ?? null,
+            ]);
+
+            if ($donation->email) {
+                $contact = ContactInfo::first();
+                $contactLine = [];
+                if ($contact?->telephone_number) {
+                    $contactLine[] = "Tel: {$contact->telephone_number}";
+                }
+                if ($contact?->phone_number) {
+                    $contactLine[] = "Mobile: {$contact->phone_number}";
+                }
+                if ($contact?->email_address) {
+                    $contactLine[] = "Email: {$contact->email_address}";
+                }
+                if ($contact?->physical_address) {
+                    $contactLine[] = "Address: {$contact->physical_address}";
+                }
+
+                $contactText = $contactLine ? implode("\n", $contactLine) : 'Please contact Kalinga ng Kababaihan management for assistance.';
+
+                $reasonLine = !empty($validated['reason'])
+                    ? "Reason stated by Kalinga ng Kababaihan: {$validated['reason']}\n\n"
+                    : '';
+
+                $body = "Hello {$donation->name},\n\n"
+                    . "Thank you for your willingness to donate. We truly appreciate your generosity.\n\n"
+                    . "At this time, we are unable to accept your goods donation. If you would like to discuss alternative arrangements or receive guidance on how to proceed, please contact Kalinga ng Kababaihan management:\n"
+                    . $reasonLine
+                    . "{$contactText}\n\n"
+                    . "Thank you again for your support.";
+
+                Mail::raw($body, function ($message) use ($donation) {
+                    $message->to($donation->email)->subject('Goods donation update');
+                });
+            }
+
+            return response()->json([
+                'status' => 'success',
+                'message' => 'Donation rejected and donor notified.',
+                'data' => $donation,
+            ], 200);
+        } catch (ModelNotFoundException $e) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Donation not found.',
+            ], 404);
+        } catch (Exception $e) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'An unexpected error occurred while rejecting donation.',
+            ], 500);
+        }
+    }
+
     public function goodsDonations(Request $request)
     {
         $query = GoodsDonation::query();
@@ -427,5 +514,82 @@ class GoodsDonationController extends Controller
             'totalAmount' => number_format($donations->sum('amount'), 2, '.', ','),
             'totalCount' => $donations->count(),
         ]);
+    }
+
+    /**
+     * Suggest item names for goods donations.
+     * Example: /api/goods-donations/suggestions?count=10&seed=food
+     */
+    public function suggestItems(Request $request)
+    {
+        $validated = $request->validate([
+            'count' => 'nullable|integer|min:3|max:20',
+            'seed' => 'nullable|string|max:100',
+        ]);
+
+        $count = $validated['count'] ?? 10;
+        $seed = $validated['seed'] ?? '';
+
+        $fallback = [
+            'Rice',
+            'Canned sardines',
+            'Instant noodles',
+            'Canned corned beef',
+            'Bottled water',
+            'Sugar',
+            'Coffee',
+            'Cooking oil',
+            'Bath soap',
+            'Toothpaste',
+            'Laundry detergent',
+            'Diapers',
+            'Blankets',
+            'School supplies',
+            'Face masks',
+        ];
+
+        try {
+            $prompt = "Provide {$count} highly realistic goods donation item names commonly donated in the Philippines."
+                . " Prefer everyday relief items actually donated by individuals and community drives (e.g., groceries, hygiene, baby items, household essentials, school supplies)."
+                . " Use natural item names (no brand names unless they are commonly used as generic terms)."
+                . ($seed !== '' ? " Focus on: {$seed}." : '')
+                . " Return only a JSON array of strings (no extra text).";
+
+            $response = Http::withHeaders([
+                'Content-Type' => 'application/json',
+                'Authorization' => 'Bearer ' . env('GROQ_API_KEY'),
+            ])->post('https://api.groq.com/openai/v1/chat/completions', [
+                'model' => 'llama-3.1-8b-instant',
+                'messages' => [
+                    [
+                        'role' => 'user',
+                        'content' => $prompt,
+                    ],
+                ],
+            ]);
+
+            if ($response->successful()) {
+                $responseData = $response->json();
+                $text = $responseData['choices'][0]['message']['content'] ?? '';
+                $decoded = json_decode($text, true);
+
+                if (is_array($decoded)) {
+                    $suggestions = array_values(array_unique(array_filter($decoded, 'is_string')));
+                    if (!empty($suggestions)) {
+                        return response()->json([
+                            'suggestions' => array_slice($suggestions, 0, $count),
+                        ], 200);
+                    }
+                }
+            } else {
+                Log::error('Groq API Error (suggestItems)', ['response' => $response->body()]);
+            }
+        } catch (Exception $e) {
+            Log::error('Groq API Request Failed (suggestItems)', ['message' => $e->getMessage()]);
+        }
+
+        return response()->json([
+            'suggestions' => array_slice($fallback, 0, $count),
+        ], 200);
     }
 }

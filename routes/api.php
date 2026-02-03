@@ -71,10 +71,25 @@ Route::delete('/knowledgebase/{id}', [KnowledgebaseController::class, 'destroy']
 Route::get('/knowledgebase/search', [KnowledgebaseController::class, 'search']);
 
 Route::get('/contact-info', [ContactInfoController::class, 'show']);
-Route::put('/contact-info', [ContactInfoController::class, 'update'])->middleware(['auth:sanctum', 'role:admin']);
+Route::post('/contact-info', [ContactInfoController::class, 'update'])->middleware(['auth:sanctum', 'role:admin']);
 
 Route::get('/homepage-info', [HomepageInfoController::class, 'show']);
 Route::put('/homepage-info', [HomepageInfoController::class, 'update'])->middleware(['auth:sanctum', 'role:admin']);
+
+
+Route::get('/homepage-carousel', [HomepageInfoController::class, 'getCarouselImages']);
+Route::post('/homepage-carousel', [HomepageInfoController::class, 'saveCarouselImages'])->middleware(['auth:sanctum', 'role:admin']);
+Route::delete('/homepage-carousel/{id}', [HomepageInfoController::class, 'deleteCarouselImage'])->middleware(['auth:sanctum', 'role:admin']);
+
+Route::get('/programs-info', [HomepageInfoController::class, 'getProgramsInfo']);
+Route::put('/programs-info', [HomepageInfoController::class, 'savePrograms'])->middleware(['auth:sanctum', 'role:admin']);
+Route::get('/encouragement-info', [HomepageInfoController::class, 'getEncouragementInfo']);
+Route::put('/encouragement-info', [HomepageInfoController::class, 'saveEncouragement'])->middleware(['auth:sanctum', 'role:admin']);
+Route::get('/quotes-info', [HomepageInfoController::class, 'getQuotesInfo']);
+Route::put('/quotes-info', [HomepageInfoController::class, 'saveQuotes'])->middleware(['auth:sanctum', 'role:admin']);
+
+Route::get('/involvement-info', [HomepageInfoController::class, 'getInvolvementInfo']);
+Route::put('/involvement-info', [HomepageInfoController::class, 'saveInvolvement'])->middleware(['auth:sanctum', 'role:admin']);
 
 Route::get('/officers', [OfficersController::class, 'index']);
 Route::post('/officers', [OfficersController::class, 'store'])->middleware(['auth:sanctum', 'role:admin']);
@@ -100,10 +115,15 @@ Route::get('/enquiries/search', [EnquiryController::class, 'search'])->middlewar
 
 // Projects
 Route::get('/projects/search', [ProjectController::class, 'search']);
+Route::get('/projects/print', [ProjectController::class, 'print']);
+Route::get('/projects/print-file/{filename}', [ProjectController::class, 'printFile'])
+    ->withoutMiddleware(['auth:sanctum', 'role:admin']);
+Route::get('/projects/{projectId}/liquidated-items/print', [ProjectController::class, 'printLiquidatedItems']);
 Route::apiResource('projects', ProjectController::class);
 Route::post('/projects/update/{id}', [ProjectController::class, 'update']);
 Route::get('/upcoming-projects', [ProjectController::class, 'upcomingProjects']);
 Route::get('/past-projects', [ProjectController::class, 'pastProjects']);
+
 
 Route::post('/projects/{id}/liquidate', [ProjectController::class, 'attachResources']);
 Route::get('/projects/{id}/resources', [ProjectController::class, 'resources']);
@@ -182,6 +202,8 @@ Route::get('/goods-donations/v2/stats', [GoodsDonationController::class, 'stats'
 Route::get('/goods-donations/v2/counts', [GoodsDonationController::class, 'counts']);
 Route::get('/goods-donations/v2/print', [GoodsDonationController::class, 'goodsDonations']);
 Route::put('/goods-donations/v2/{id}/approve', [GoodsDonationController::class, 'testConfirmation']);
+Route::put('/goods-donations/v2/{id}/reject', [GoodsDonationController::class, 'reject']);
+Route::get('/goods-donations/v2/suggestions', [GoodsDonationController::class, 'suggestItems']);
 
 
 // Get all Goods Donation Items by donation ID
@@ -197,6 +219,7 @@ Route::delete('/goods-donations/items/{id}', [ItemController::class, 'destroy'])
 
 Route::get('/items', [ItemController::class, 'getAllItems']);
 Route::get('/items/confirmed', [ItemController::class, 'confirmedItems']);
+Route::get('/items/confirmed/print', [ItemController::class, 'printConfirmedItems']);
 
 
 // Goods Donation Categories and Subcategories
@@ -210,6 +233,8 @@ Route::get('/goods-donation-subcategories', [GDSubcategoryController::class, 'in
 Route::get('/expenditures/search', [ExpenditureController::class, 'search']);
 Route::get('/expenditures/date-range', [ExpenditureController::class, 'getByDateRange']);
 Route::get('/expenditures/totals', [ExpenditureController::class, 'getTotals']);
+Route::get('/expenditures/print', [ExpenditureController::class, 'print']);
+Route::get('/expenditures/{id}/print', [ExpenditureController::class, 'printExpenditure']);
 Route::post('/expenditures/update/{id}', [ExpenditureController::class, 'update']);
 Route::apiResource('expenditures', ExpenditureController::class);
 

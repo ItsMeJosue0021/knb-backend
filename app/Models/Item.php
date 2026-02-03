@@ -16,7 +16,8 @@ class Item extends Model
         "sub_category",
         "quantity",
         "unit",
-        "notes"
+        "notes",
+        "expiry_date"
     ];
 
     public function goodsDonation() {

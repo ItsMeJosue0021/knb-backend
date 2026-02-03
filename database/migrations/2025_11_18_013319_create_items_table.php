@@ -22,6 +22,8 @@ return new class extends Migration
             $table->integer('quantity');
             $table->string('unit')->nullable();
             $table->longText('notes')->nullable();
+            $table->longText('rejection_reason')->nullable();
+            $table->date('expiry_date')->nullable();
             $table->boolean('is_confirmed')->default(false);
             $table->timestamps();
         });

@@ -20,6 +20,7 @@ return new class extends Migration {
             $table->string('address');
             $table->year('year');
             $table->string('month'); // as text like "June", "July"
+            $table->longText('reject_reason')->nullable();
             $table->string("status")->default("pending");
             $table->timestamps();
         });

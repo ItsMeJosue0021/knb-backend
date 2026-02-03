@@ -56,6 +56,10 @@ class UpdateItemRequest extends FormRequest
                 'nullable',
                 'string'
             ],
+            'expiry_date' => [
+                'nullable',
+                'date',
+            ],
         ];
     }
 }

@@ -6,14 +6,34 @@ use App\Models\Tag;
 use App\Models\Project;
 use App\Models\Item;
 use App\Models\ProjectResource;
+use App\Models\VolunteerRequest;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
+use Barryvdh\DomPDF\Facade\Pdf;
 
 class ProjectController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
-        $projects = Project::latest()->get()->map(function ($project) {
+        $request->validate([
+            'start_date' => 'nullable|date',
+            'end_date' => 'nullable|date|after_or_equal:start_date',
+        ]);
+
+        $startDate = $request->input('start_date');
+        $endDate = $request->input('end_date');
+
+        $projects = Project::query()
+            ->when($startDate, function ($query) use ($startDate) {
+                $query->whereDate('date', '>=', $startDate);
+            })
+            ->when($endDate, function ($query) use ($endDate) {
+                $query->whereDate('date', '<=', $endDate);
+            })
+            ->latest()
+            ->get()
+            ->map(function ($project) {
             return [
                 'id' => $project->id,
                 'title' => $project->title,
@@ -274,5 +294,86 @@ class ProjectController extends Controller
             });
 
         return response()->json($projects);
+    }
+
+    public function print(Request $request)
+    {
+        $request->validate([
+            'start_date' => 'nullable|date',
+            'end_date' => 'nullable|date|after_or_equal:start_date',
+        ]);
+
+        $startDate = $request->input('start_date');
+        $endDate = $request->input('end_date');
+
+        $projects = Project::query()
+            ->when($startDate, function ($query) use ($startDate) {
+                $query->whereDate('date', '>=', $startDate);
+            })
+            ->when($endDate, function ($query) use ($endDate) {
+                $query->whereDate('date', '<=', $endDate);
+            })
+            ->orderBy('date', 'asc')
+            ->get();
+
+        $projectIds = $projects->pluck('id');
+        $volunteersByProject = VolunteerRequest::query()
+            ->whereIn('project_id', $projectIds)
+            ->where('status', 'approved')
+            ->orderBy('last_name')
+            ->orderBy('first_name')
+            ->get()
+            ->groupBy('project_id')
+            ->map(function ($requests) {
+                return $requests->map(function ($request) {
+                    $middle = $request->middle_name ? ' ' . $request->middle_name : '';
+                    return trim($request->first_name . $middle . ' ' . $request->last_name);
+                })->values()->all();
+            });
+
+        $pdf = Pdf::loadView('projects.report', [
+            'projects' => $projects,
+            'volunteersByProject' => $volunteersByProject,
+            'generatedAt' => now(),
+            'startDate' => $startDate,
+            'endDate' => $endDate,
+        ])->setPaper('a4', 'portrait');
+
+        return $pdf->stream('projects.pdf');
+    }
+
+    public function printLiquidatedItems(int $projectId)
+    {
+        $project = Project::with(['resources.item'])->findOrFail($projectId);
+
+        $pdf = Pdf::loadView('projects.liquidated-report', [
+            'project' => $project,
+            'resources' => $project->resources,
+            'generatedAt' => now(),
+        ])->setPaper('a4', 'portrait');
+
+        $safeTitle = preg_replace('/[^A-Za-z0-9_-]+/', '-', $project->title);
+        $fileName = 'project-liquidation-' . $project->id . '-' . $safeTitle . '.pdf';
+
+        return $pdf->stream($fileName);
+    }
+
+    public function printFile($filename)
+    {
+        if (str_contains($filename, '/') || str_contains($filename, '\\')) {
+            return response()->json(['message' => 'Invalid filename.'], 400);
+        }
+
+        $path = 'reports/' . $filename;
+        if (!Storage::disk('public')->exists($path)) {
+            return response()->json(['message' => 'File not found.'], 404);
+        }
+
+        $file = Storage::disk('public')->get($path);
+
+        return response($file, 200, [
+            'Content-Type' => 'application/pdf',
+            'Content-Disposition' => 'inline; filename="' . $filename . '"',
+        ]);
     }
 }

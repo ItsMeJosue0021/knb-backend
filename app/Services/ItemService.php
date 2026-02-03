@@ -51,6 +51,7 @@ class ItemService
                 'status' => $item->quantity > 0 ? 'available' : 'consumed',
                 'unit' => $item->unit,
                 'notes' => $item->notes,
+                'expiry_date' => $item->expiry_date,
                 'created_at' => $item->created_at,
                 'updated_at' => $item->updated_at,
             ];
@@ -65,6 +66,12 @@ class ItemService
             'subCategoryModel:id,name'
         ])
             ->where('is_confirmed', true)
+            ->when(isset($filters['start_date']) && $filters['start_date'] !== '', function ($query) use ($filters) {
+                $query->whereDate('created_at', '>=', $filters['start_date']);
+            })
+            ->when(isset($filters['end_date']) && $filters['end_date'] !== '', function ($query) use ($filters) {
+                $query->whereDate('created_at', '<=', $filters['end_date']);
+            })
             ->when(isset($filters['search']) && $filters['search'] !== '', function ($query) use ($filters) {
                 $search = $filters['search'];
                 $query->where(function ($sub) use ($search) {
@@ -96,6 +103,7 @@ class ItemService
                 'status' => $item->quantity > 0 ? 'available' : 'consumed',
                 'unit' => $item->unit,
                 'notes' => $item->notes,
+                'expiry_date' => $item->expiry_date,
                 'created_at' => $item->created_at,
                 'updated_at' => $item->updated_at,
             ];

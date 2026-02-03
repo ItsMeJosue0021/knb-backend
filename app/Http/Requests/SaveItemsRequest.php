@@ -56,6 +56,10 @@ class SaveItemsRequest extends FormRequest
                 'nullable',
                 'string',
             ],
+            'expiry_date' => [
+                'nullable',
+                'date',
+            ],
 
             'image' => [
                 'nullable',
