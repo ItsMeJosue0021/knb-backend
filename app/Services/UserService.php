@@ -7,13 +7,15 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Mail;
 
-class UserService {
+class UserService
+{
 
     /**
      * Summary of getAllUsers
      * @return \Illuminate\Database\Eloquent\Collection<int, User>
      */
-    public function getAllUsers(?string $searchTerm = null) {
+    public function getAllUsers(?string $searchTerm = null)
+    {
         return User::where('is_archived', false)
             ->when($searchTerm, function ($query, $searchTerm) {
                 $like = '%' . $searchTerm . '%';
@@ -33,7 +35,8 @@ class UserService {
      * @param Request $request
      * @return array{address: array{barangay: mixed, block: mixed, city: mixed, code: mixed, lot: mixed, province: mixed, street: mixed, subdivision: mixed, contactNumber: mixed, email: mixed, firstName: mixed, fullName: string, id: mixed, image: mixed, lastName: mixed, middleName: mixed, role: mixed, username: mixed}}
      */
-    public function getLoggedInUser(Request $request) {
+    public function getLoggedInUser(Request $request)
+    {
 
         $data = $request->user()->load('role');
 
@@ -67,7 +70,8 @@ class UserService {
      * Summary of getArchivedUsers
      * @return \Illuminate\Database\Eloquent\Collection<int, User>
      */
-    public function getArchivedUsers(?string $searchTerm = null) {
+    public function getArchivedUsers(?string $searchTerm = null)
+    {
         return User::where('is_archived', true)
             ->when($searchTerm, function ($query, $searchTerm) {
                 $like = '%' . $searchTerm . '%';
@@ -87,7 +91,8 @@ class UserService {
      * @param int $userId
      * @return User
      */
-    public function restore(int $userId) {
+    public function restore(int $userId)
+    {
         $user = User::where('is_archived', true)->findOrFail($userId);
         $user->is_archived = false;
         $user->save();
@@ -100,7 +105,8 @@ class UserService {
      * @param int $userId
      * @return void
      */
-    public function delete(int $userId) {
+    public function delete(int $userId)
+    {
         $user = User::findOrFail($userId);
 
         if (!empty($user->email)) {
@@ -111,7 +117,7 @@ class UserService {
                 ['name' => $name],
                 function ($message) use ($user) {
                     $message->to($user->email)
-                        ->subject('Your Account Has Been Archived');
+                        ->subject('Your Account Has Been Deactivated');
                 }
             );
         }

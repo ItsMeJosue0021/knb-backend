@@ -3,7 +3,7 @@
 
 <head>
     <meta charset="UTF-8">
-    <title>Account Archived</title>
+    <title>Account Deactivated</title>
     <link href="https://fonts.googleapis.com/css2?family=Chewy&family=Poppins:wght@400;700&display=swap"
         rel="stylesheet">
 </head>
