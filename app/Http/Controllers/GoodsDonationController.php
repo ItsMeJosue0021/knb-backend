@@ -113,8 +113,7 @@ class GoodsDonationController extends Controller
 
         $types = implode(', ', $donation->type);
 
-        // $email = 'margeiremulta@gmail.com';
-        $email = 'joshuasalceda0021@gmail.com';
+        $email = 'margeiremulta@gmail.com';
 
         // Email to admin
         $donorName = $donation->name ?? 'Someone';
