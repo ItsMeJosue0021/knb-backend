@@ -58,6 +58,13 @@
         .section {
             margin-bottom: 16px;
         }
+        .report-description {
+            font-size: 11px;
+            color: #444;
+            margin: 0 0 10px;
+            line-height: 1.45;
+            text-align: justify;
+        }
         .label {
             font-weight: bold;
         }
@@ -98,6 +105,11 @@
         <div><span class="label">Date:</span> {{ $project->date }}</div>
         <div><span class="label">Description:</span> {{ $project->description }}</div>
     </div>
+
+    <p class="report-description">
+        This report details the liquidated resources for the selected project, including item names, quantities, units, and notes.
+        It provides a formal record for post-activity documentation and resource utilization accountability.
+    </p>
 
     <table>
         <thead>

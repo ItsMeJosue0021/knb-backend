@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use App\Models\CashLiquidation;
 use App\Models\ProjectResource;
 
 class Project extends Model
@@ -24,5 +25,10 @@ class Project extends Model
     public function resources()
     {
         return $this->hasMany(ProjectResource::class);
+    }
+
+    public function cashLiquidations()
+    {
+        return $this->hasMany(CashLiquidation::class);
     }
 }

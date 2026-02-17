@@ -7,6 +7,7 @@ use Illuminate\Http\Request;
 use App\Models\GoodsDonation;
 use App\Http\Requests\EditGDNameOrDescription;
 use App\Services\GoodsDonationService;
+use App\Services\InventoryService;
 use App\Services\ItemService;
 use Illuminate\Support\Facades\DB;
 use App\Http\Controllers\Controller;
@@ -20,14 +21,20 @@ class GoodsDonationController extends Controller
 {
 
     protected GoodsDonationService $goodsDonationService;
+    protected InventoryService $inventoryService;
 
-    public function __construct(GoodsDonationService $goodsDonationService)
+    public function __construct(GoodsDonationService $goodsDonationService, InventoryService $inventoryService)
     {
         $this->goodsDonationService = $goodsDonationService;
+        $this->inventoryService = $inventoryService;
     }
 
     public function index(Request $request)
     {
+        $validated = $request->validate([
+            'near_expiration_days' => 'nullable|integer|min:1|max:365',
+        ]);
+
         $query = GoodsDonation::query();
 
         // if ($request->has('name')) {
@@ -51,6 +58,19 @@ class GoodsDonationController extends Controller
 
         if ($request->has('year')) {
             $query->where('year', $request->input('year'));
+        }
+
+        $nearExpirationDays = (int) ($validated['near_expiration_days'] ?? 0);
+
+        if ($nearExpirationDays > 0) {
+            $today = now()->toDateString();
+            $until = now()->addDays($nearExpirationDays)->toDateString();
+
+            $query->whereHas('items', function ($itemQuery) use ($today, $until) {
+                $itemQuery->whereNotNull('expiry_date')
+                    ->whereDate('expiry_date', '>=', $today)
+                    ->whereDate('expiry_date', '<=', $until);
+            });
         }
 
         $donations = $query->latest()->get()->loadCount('items');
@@ -93,7 +113,8 @@ class GoodsDonationController extends Controller
 
         $types = implode(', ', $donation->type);
 
-        $email = 'margeiremulta@gmail.com';
+        // $email = 'margeiremulta@gmail.com';
+        $email = 'joshuasalceda0021@gmail.com';
 
         // Email to admin
         $donorName = $donation->name ?? 'Someone';
@@ -178,10 +199,14 @@ class GoodsDonationController extends Controller
 
     /**
      * Filter goods donations by year, month, or both.
-     * Example: /api/goods-donations/filter?year=2025&month=October
+     * Example: /api/goods-donations/filter?year=2025&month=October&near_expiration_days=30
      */
     public function filter(Request $request)
     {
+        $validated = $request->validate([
+            'near_expiration_days' => 'nullable|integer|min:1|max:365',
+        ]);
+
         $year = $request->input('year');
         $month = $request->input('month');
 
@@ -193,6 +218,19 @@ class GoodsDonationController extends Controller
 
         if ($month) {
             $query->where('month', $month);
+        }
+
+        $nearExpirationDays = (int) ($validated['near_expiration_days'] ?? 0);
+
+        if ($nearExpirationDays > 0) {
+            $today = now()->toDateString();
+            $until = now()->addDays($nearExpirationDays)->toDateString();
+
+            $query->whereHas('items', function ($itemQuery) use ($today, $until) {
+                $itemQuery->whereNotNull('expiry_date')
+                    ->whereDate('expiry_date', '>=', $today)
+                    ->whereDate('expiry_date', '<=', $until);
+            });
         }
 
         $donations = $query->with('items')
@@ -374,8 +412,14 @@ class GoodsDonationController extends Controller
                 ], 400);
             }
 
-            $donation->update(['status' => 'approved']);
-            $donation->items()->update(['is_confirmed' => true]);
+            DB::transaction(function () use ($donation) {
+                $donation->update(['status' => 'approved']);
+                $donation->items()->update(['is_confirmed' => true]);
+                $donation->refresh()->load('items');
+                $this->inventoryService->syncApprovedDonation($donation);
+            });
+
+            $donation->refresh()->load('items');
 
 
             if ($donation->email) {

@@ -22,6 +22,7 @@ use App\Http\Controllers\DonationController;
 use App\Http\Controllers\GDCategoryController;
 use App\Http\Controllers\MembershipRequestController;
 use App\Http\Controllers\ExpenditureController;
+use App\Http\Controllers\CashLiquidationController;
 use App\Http\Controllers\CashDonationController;
 use App\Http\Controllers\GCashDonationController;
 use App\Http\Controllers\GDSubcategoryController;
@@ -30,6 +31,7 @@ use App\Http\Controllers\KnowledgebaseController;
 use App\Http\Controllers\PaymentWebhookController;
 use App\Http\Controllers\ExpenditureItemController;
 use App\Http\Controllers\EmergencyContactController;
+use App\Http\Controllers\InventoryController;
 use App\Http\Controllers\FaqsController;
 use App\Http\Controllers\HomepageInfoController;
 use App\Http\Controllers\ContactInfoController;
@@ -127,6 +129,14 @@ Route::get('/past-projects', [ProjectController::class, 'pastProjects']);
 
 Route::post('/projects/{id}/liquidate', [ProjectController::class, 'attachResources']);
 Route::get('/projects/{id}/resources', [ProjectController::class, 'resources']);
+Route::get('/projects/{projectId}/cash-liquidations', [CashLiquidationController::class, 'indexByProject']);
+Route::post('/projects/{projectId}/cash-liquidations', [CashLiquidationController::class, 'store']);
+
+Route::get('/cash-liquidations', [CashLiquidationController::class, 'index']);
+Route::get('/cash-liquidations/{id}', [CashLiquidationController::class, 'show']);
+Route::put('/cash-liquidations/{id}', [CashLiquidationController::class, 'update']);
+Route::post('/cash-liquidations/update/{id}', [CashLiquidationController::class, 'update']);
+Route::delete('/cash-liquidations/{id}', [CashLiquidationController::class, 'destroy']);
 
 // Volunterring request
 Route::get('/volunteering-requests/', [VolunteerRequestController::class, 'index']);
@@ -220,6 +230,15 @@ Route::delete('/goods-donations/items/{id}', [ItemController::class, 'destroy'])
 Route::get('/items', [ItemController::class, 'getAllItems']);
 Route::get('/items/confirmed', [ItemController::class, 'confirmedItems']);
 Route::get('/items/confirmed/print', [ItemController::class, 'printConfirmedItems']);
+Route::get('/inventory', [InventoryController::class, 'index']);
+Route::get('/inventory/print', [InventoryController::class, 'printInventory']);
+Route::get('/inventory/history', [InventoryController::class, 'history']);
+Route::get('/inventory/history/print', [InventoryController::class, 'printHistory']);
+Route::get('/inventory/history/in', [InventoryController::class, 'inHistory']);
+Route::get('/inventory/history/out', [InventoryController::class, 'outHistory']);
+Route::get('/inventory/items/{inventoryItemId}/history', [InventoryController::class, 'historyByInventoryItem']);
+Route::get('/inventory/subcategories/{subcategoryId}/history', [InventoryController::class, 'historyBySubcategory']);
+Route::post('/inventory/sync-confirmed', [InventoryController::class, 'syncConfirmedItems']);
 
 
 // Goods Donation Categories and Subcategories

@@ -24,11 +24,16 @@ class ItemController extends Controller
      */
     public function getAllItems(Request $request)
     {
+        $validated = $request->validate([
+            'near_expiration_days' => 'nullable|integer|min:1|max:365',
+        ]);
+
         return response([
             'items' => $this->itemService->getAllItems([
                 'search' => $request->query('search', ''),
                 'category' => $request->query('category', ''),
-                'sub_category' => $request->query('sub_category', '')
+                'sub_category' => $request->query('sub_category', ''),
+                'near_expiration_days' => $validated['near_expiration_days'] ?? null,
             ])
         ], 200);
     }
@@ -42,6 +47,7 @@ class ItemController extends Controller
         $request->validate([
             'start_date' => 'nullable|date',
             'end_date' => 'nullable|date|after_or_equal:start_date',
+            'near_expiration_days' => 'nullable|integer|min:1|max:365',
         ]);
 
         return response([
@@ -49,6 +55,7 @@ class ItemController extends Controller
                 'search' => $request->query('search', ''),
                 'start_date' => $request->query('start_date'),
                 'end_date' => $request->query('end_date'),
+                'near_expiration_days' => $request->query('near_expiration_days'),
             ])
         ], 200);
     }
@@ -58,6 +65,7 @@ class ItemController extends Controller
         $request->validate([
             'start_date' => 'nullable|date',
             'end_date' => 'nullable|date|after_or_equal:start_date',
+            'near_expiration_days' => 'nullable|integer|min:1|max:365',
         ]);
 
         $startDate = $request->query('start_date');
@@ -66,6 +74,7 @@ class ItemController extends Controller
         $items = $this->itemService->getConfirmedItems([
             'start_date' => $startDate,
             'end_date' => $endDate,
+            'near_expiration_days' => $request->query('near_expiration_days'),
         ]);
 
         $pdf = Pdf::loadView('items.confirmed-report', [

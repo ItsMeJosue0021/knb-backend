@@ -7,6 +7,7 @@ use App\Models\Project;
 use App\Models\Item;
 use App\Models\ProjectResource;
 use App\Models\VolunteerRequest;
+use App\Services\InventoryService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
@@ -14,6 +15,13 @@ use Barryvdh\DomPDF\Facade\Pdf;
 
 class ProjectController extends Controller
 {
+    protected InventoryService $inventoryService;
+
+    public function __construct(InventoryService $inventoryService)
+    {
+        $this->inventoryService = $inventoryService;
+    }
+
     public function index(Request $request)
     {
         $request->validate([
@@ -78,6 +86,12 @@ class ProjectController extends Controller
                     if ($item->quantity < $resource['quantity']) {
                         throw new \RuntimeException("Insufficient quantity for item {$item->id} ({$item->name}).");
                     }
+
+                    $this->inventoryService->consumeFromProject(
+                        $item,
+                        (int) $resource['quantity'],
+                        (int) $project->id
+                    );
 
                     $item->decrement('quantity', $resource['quantity']);
 

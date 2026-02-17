@@ -33,6 +33,15 @@ class ItemService
             ->when(isset($filters['sub_category']) && $filters['sub_category'] !== '', function ($query) use ($filters) {
                 $query->where('sub_category', $filters['sub_category']);
             })
+            ->when(isset($filters['near_expiration_days']) && (int) $filters['near_expiration_days'] > 0, function ($query) use ($filters) {
+                $days = (int) $filters['near_expiration_days'];
+                $today = now()->toDateString();
+                $until = now()->addDays($days)->toDateString();
+
+                $query->whereNotNull('expiry_date')
+                    ->whereDate('expiry_date', '>=', $today)
+                    ->whereDate('expiry_date', '<=', $until);
+            })
             ->orderBy('goods_donation_id')
             ->orderByDesc('created_at')
             ->get();
@@ -85,6 +94,15 @@ class ItemService
                         });
                 });
             })
+            ->when(isset($filters['near_expiration_days']) && (int) $filters['near_expiration_days'] > 0, function ($query) use ($filters) {
+                $days = (int) $filters['near_expiration_days'];
+                $today = now()->toDateString();
+                $until = now()->addDays($days)->toDateString();
+
+                $query->whereNotNull('expiry_date')
+                    ->whereDate('expiry_date', '>=', $today)
+                    ->whereDate('expiry_date', '<=', $until);
+            })
             ->orderBy('goods_donation_id')
             ->orderByDesc('created_at')
             ->get();
@@ -124,7 +142,11 @@ class ItemService
 
     public function getItemsById(int $id)
     {
-        return Item::findOrFail($id);
+        return Item::with([
+            'goodsDonation:id,name,email,address,status',
+            'categoryModel:id,name',
+            'subCategoryModel:id,name',
+        ])->findOrFail($id);
     }
 
     /**

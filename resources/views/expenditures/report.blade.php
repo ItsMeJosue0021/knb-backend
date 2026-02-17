@@ -55,6 +55,13 @@
             color: #555;
             text-align: center;
         }
+        .report-description {
+            font-size: 11px;
+            color: #444;
+            margin: 0 0 10px;
+            line-height: 1.45;
+            text-align: justify;
+        }
         table {
             width: 100%;
             border-collapse: collapse;
@@ -93,6 +100,11 @@
             @endif
         </div>
     </div>
+
+    <p class="report-description">
+        This report summarizes recorded expenditures for the selected period, including reference details, payee information,
+        amounts, and status. It is designed to support financial review, budget monitoring, and transparent expense tracking.
+    </p>
 
     <table>
         <thead>
