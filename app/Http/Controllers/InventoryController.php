@@ -95,15 +95,23 @@ class InventoryController extends Controller
 
     public function historyByInventoryItem(Request $request, int $inventoryItemId)
     {
-        $inventoryItem = InventoryItem::find($inventoryItemId);
+        // Inventory rows are grouped by subcategory in index(), so this endpoint
+        // receives subcategory IDs from some clients. Resolve that case first to
+        // avoid ID-collision mismatches (inventory_item.id vs sub_category_id).
+        $subcategoryId = null;
 
-        $subcategoryId = $inventoryItem?->sub_category_id ?? $inventoryItemId;
-
-        $subcategoryExists = InventoryItem::query()
-            ->where('sub_category_id', $subcategoryId)
+        $directSubcategoryExists = InventoryItem::query()
+            ->where('sub_category_id', $inventoryItemId)
             ->exists();
 
-        if (!$subcategoryExists) {
+        if ($directSubcategoryExists) {
+            $subcategoryId = $inventoryItemId;
+        } else {
+            $inventoryItem = InventoryItem::find($inventoryItemId);
+            $subcategoryId = $inventoryItem ? (int) $inventoryItem->sub_category_id : null;
+        }
+
+        if (empty($subcategoryId)) {
             return response()->json([
                 'message' => 'Inventory item or subcategory not found.',
             ], 404);
