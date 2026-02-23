@@ -35,7 +35,8 @@ class GDCategorySeeder extends Seeder
 
                 // Others
                 'Snacks & Biscuits',
-                'Baby Food & Formula'
+                'Baby Food & Formula',
+                'Bottled Water'
             ],
 
             'Clothings' => [
