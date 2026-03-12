@@ -19,6 +19,7 @@ use Database\Seeders\InvolvementSeeder;
 use Database\Seeders\EncouragementSeeder;
 use Database\Seeders\QuotesSeeder;
 use Database\Seeders\WebsiteLogoSeeder;
+use Database\Seeders\UnitSeeder;
 
 class DatabaseSeeder extends Seeder
 {
@@ -38,6 +39,7 @@ class DatabaseSeeder extends Seeder
             EventsSeeder::class,
             GDCategorySeeder::class,
             ItemNameSeeder::class,
+            UnitSeeder::class,
             ContactInforSeeder::class,
             FaqsSeeder::class,
             OfficerSeeder::class,

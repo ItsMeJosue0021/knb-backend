@@ -47,7 +47,7 @@ class UpdateItemRequest extends FormRequest
             ],
 
             'unit' => [
-                'nullable',
+                'required',
                 'string',
                 'max:100'
             ],

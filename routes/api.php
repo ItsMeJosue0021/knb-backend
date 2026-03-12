@@ -36,6 +36,7 @@ use App\Http\Controllers\HomepageInfoController;
 use App\Http\Controllers\ContactInfoController;
 use App\Http\Controllers\OfficersController;
 use App\Http\Controllers\GroqChatController;
+use App\Http\Controllers\UnitController;
 use App\Http\Controllers\WebsiteLogoController;
 
 Route::apiResource('roles', RoleController::class)->middleware('auth:sanctum');
@@ -230,9 +231,15 @@ Route::get('/items/confirmed/print', [ItemController::class, 'printConfirmedItem
 
 Route::get('/item-names/suggestions', [ItemNameController::class, 'suggestions']);
 Route::get('/item-names', [ItemNameController::class, 'index']);
-Route::post('/item-names', [ItemNameController::class, 'store']);
-Route::put('/item-names/{id}', [ItemNameController::class, 'update']);
-Route::delete('/item-names/{id}', [ItemNameController::class, 'destroy']);
+Route::post('/item-names', [ItemNameController::class, 'store'])->middleware(['auth:sanctum', 'role:admin']);
+Route::put('/item-names/{id}', [ItemNameController::class, 'update'])->middleware(['auth:sanctum', 'role:admin']);
+Route::delete('/item-names/{id}', [ItemNameController::class, 'destroy'])->middleware(['auth:sanctum', 'role:admin']);
+
+Route::get('/units', [UnitController::class, 'index']);
+Route::get('/units/{id}', [UnitController::class, 'show']);
+Route::post('/units', [UnitController::class, 'store'])->middleware(['auth:sanctum', 'role:admin']);
+Route::put('/units/{id}', [UnitController::class, 'update'])->middleware(['auth:sanctum', 'role:admin']);
+Route::delete('/units/{id}', [UnitController::class, 'destroy'])->middleware(['auth:sanctum', 'role:admin']);
 
 Route::get('/inventory', [InventoryController::class, 'index']);
 Route::get('/inventory/print', [InventoryController::class, 'printInventory']);
@@ -248,8 +255,16 @@ Route::post('/inventory/sync-confirmed', [InventoryController::class, 'syncConfi
 
 // Goods Donation Categories and Subcategories
 Route::get('/goods-donation-categories', [GDCategoryController::class, 'index']);
+Route::get('/goods-donation-categories/{id}', [GDCategoryController::class, 'show']);
+Route::post('/goods-donation-categories', [GDCategoryController::class, 'store'])->middleware(['auth:sanctum', 'role:admin']);
+Route::put('/goods-donation-categories/{id}', [GDCategoryController::class, 'update'])->middleware(['auth:sanctum', 'role:admin']);
+Route::delete('/goods-donation-categories/{id}', [GDCategoryController::class, 'destroy'])->middleware(['auth:sanctum', 'role:admin']);
 // Goods Donation Subcategories
 Route::get('/goods-donation-subcategories', [GDSubcategoryController::class, 'index']);
+Route::get('/goods-donation-subcategories/{id}', [GDSubcategoryController::class, 'show']);
+Route::post('/goods-donation-subcategories', [GDSubcategoryController::class, 'store'])->middleware(['auth:sanctum', 'role:admin']);
+Route::put('/goods-donation-subcategories/{id}', [GDSubcategoryController::class, 'update'])->middleware(['auth:sanctum', 'role:admin']);
+Route::delete('/goods-donation-subcategories/{id}', [GDSubcategoryController::class, 'destroy'])->middleware(['auth:sanctum', 'role:admin']);
 
 
 // Expenditures API routes

@@ -47,7 +47,7 @@ class SaveItemsRequest extends FormRequest
             ],
 
             'unit' => [
-                'nullable',
+                'required',
                 'string',
                 'max:50',
             ],
