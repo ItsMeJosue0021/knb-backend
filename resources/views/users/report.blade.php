@@ -4,29 +4,8 @@
     <meta charset="UTF-8">
     <title>Users Report</title>
     <style>
-        /* Embed fonts locally so DomPDF can use them */
-        @font-face {
-            font-family: "Poppins";
-            src: url("{{ public_path('fonts/Poppins-Regular.ttf') }}") format("truetype");
-            font-weight: 400;
-            font-style: normal;
-        }
-
-        @font-face {
-            font-family: "Poppins";
-            src: url("{{ public_path('fonts/Poppins-SemiBold.ttf') }}") format("truetype");
-            font-weight: 600;
-            font-style: normal;
-        }
-
-        @font-face {
-            font-family: "Chewy";
-            src: url("{{ public_path('fonts/Chewy-Regular.ttf') }}") format("truetype");
-            font-weight: 400;
-            font-style: normal;
-        }
         body {
-            font-family: "Poppins", Arial, sans-serif;
+            font-family: Arial, sans-serif;
             margin: 24px;
             color: #1f2937;
         }
@@ -61,14 +40,13 @@
         .brand .title {
             display: block;
             font-size: 18px;
-            font-family: "Chewy", "Arial Rounded MT Bold", Arial, sans-serif;
+            font-family: Arial, sans-serif;
         }
 
         .brand .subtitle {
             display: block;
             font-size: 13px;
-            font-family: "Poppins", Arial, sans-serif;
-            font-weight: 400;
+            font-family: Arial, sans-serif;
         }
 
         h1 {
@@ -97,7 +75,7 @@
         th {
             background: #f3f4f6;
             font-weight: 600;
-            font-family: "Poppins", Arial, sans-serif;
+            font-family: Arial, sans-serif;
         }
 
         tbody tr:nth-child(even) {
@@ -113,7 +91,7 @@
         .report-title {
             font-size: 18px;
             margin: 0;
-            font-family: "Chewy", "Arial Rounded MT Bold", Arial, sans-serif;
+            font-family: Arial, sans-serif;
         }
 
         .meta {

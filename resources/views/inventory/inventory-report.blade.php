@@ -5,7 +5,7 @@
     <title>Inventory Report</title>
     <style>
         body {
-            font-family: "Poppins", DejaVu Sans, Arial, sans-serif;
+            font-family: Arial, sans-serif;
             font-size: 12px;
             color: #222;
         }
@@ -115,14 +115,13 @@
     </div>
 
     <p class="report-description">
-        This report presents current inventory balances grouped by subcategory based on the selected filters.
-        When multiple units exist within the same subcategory, quantities are consolidated for display and detailed unit breakdowns are shown to support operational monitoring.
+        This report presents current inventory balances by inventory item (identified by item name and unit) based on the selected filters.
     </p>
 
     <table>
         <thead>
             <tr>
-                <th style="width: 10%;">Subcat ID</th>
+                <th style="width: 10%;">Item ID</th>
                 <th style="width: 22%;">Category</th>
                 <th style="width: 22%;">Subcategory</th>
                 <th style="width: 12%;">Quantity</th>

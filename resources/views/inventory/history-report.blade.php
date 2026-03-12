@@ -6,7 +6,7 @@
     <title>Inventory History Report</title>
     <style>
         body {
-            font-family: "Poppins", DejaVu Sans, Arial, sans-serif;
+            font-family: Arial, sans-serif;
             font-size: 10px;
             color: #222;
         }
@@ -71,6 +71,14 @@
             margin-bottom: 8px;
         }
 
+        .item-name {
+            font-size: 11px;
+            font-weight: 700;
+            text-align: center;
+            margin-top: 4px;
+            color: #333;
+        }
+
         .report-description {
             font-size: 10px;
             color: #444;
@@ -103,6 +111,25 @@
 </head>
 
 <body>
+    @php
+        $historyItemName = $filters['item_name'] ?? '';
+        $historyCollection = collect($history ?? []);
+
+        if (empty($historyItemName) && $historyCollection->isNotEmpty()) {
+            $firstHistoryRow = $historyCollection->first();
+            $historyItemName = $firstHistoryRow['inventory_item_name']
+                ?? $firstHistoryRow['item_name']
+                ?? $firstHistoryRow['source_item_name']
+                ?? $firstHistoryRow['source_name']
+                ?? $firstHistoryRow['notes']
+                ?? 'N/A';
+        }
+
+        if (empty($historyItemName)) {
+            $historyItemName = 'N/A';
+        }
+    @endphp
+
     <div class="header">
         <img class="logo" src="{{ public_path('logo.png') }}" alt="logo">
         <div class="brand">
@@ -113,9 +140,12 @@
 
     <div class="report-heading">
         <div class="report-title">Inventory History Report</div>
+        <div class="item-name">Item: {{ $historyItemName }}</div>
         <div class="meta">
             Generated: {{ $generatedAt->format('Y-m-d H:i') }}
-            @if (!empty($filters['inventory_item_id']) || !empty($filters['category']) || !empty($filters['sub_category']) || !empty($filters['unit']) || !empty($filters['type']) || !empty($filters['start_date']) || !empty($filters['end_date']) || !empty($filters['near_expiration_days']))
+            <span class="muted">|</span>
+            Item: {{ $historyItemName }}
+            @if (!empty($filters['item_name']) || !empty($filters['inventory_item_id']) || !empty($filters['category']) || !empty($filters['sub_category']) || !empty($filters['unit']) || !empty($filters['type']) || !empty($filters['start_date']) || !empty($filters['end_date']) || !empty($filters['near_expiration_days']))
                 <span class="muted">|</span>
                 Filters:
                 InventoryItem={{ $filters['inventory_item_id'] ?? 'Any' }},
@@ -144,28 +174,53 @@
         <thead>
             <tr>
                 <th style="width: 12%;">Occurred</th>
-                {{-- <th style="width: 6%;">Type</th> --}}
-                <th style="width: 11%;">Category</th>
-                <th style="width: 11%;">Subcategory</th>
-                <th style="width: 7%;">Original Qty</th>
+                <th style="width: 9%;">Type</th>
+                <th style="width: 10%;">Quantity</th>
                 <th style="width: 7%;">Unit</th>
-                <th style="width: 14%;">Item Name</th>
-                <th style="width: 9%;">Expiry Date</th>
                 <th style="width: 9%;">Remaining Qty.</th>
+                <th style="width: 11%;">Status</th>
+                <th style="width: 9%;">Expiry Date</th>
+                <th style="width: 11%;">Project</th>
+                <th style="width: 10%;">Notes</th>
             </tr>
         </thead>
         <tbody>
             @forelse ($history as $entry)
+                @php
+                    $entryType = strtolower((string) ($entry['type'] ?? ''));
+                    $quantityValue = is_numeric($entry['quantity'] ?? null) ? (float) $entry['quantity'] : 0;
+                    $quantitySign = '';
+                    if ($entryType === 'in') {
+                        $quantitySign = '+';
+                    } elseif ($entryType === 'out') {
+                        $quantitySign = '-';
+                    }
+                    $quantityDisplay = $quantitySign . ($quantityValue === 0 ? '0' : $entry['quantity']);
+                    $remainingQuantity = $entry['source_item_remaining_quantity']
+                        ?? $entry['inventory_remaining_quantity']
+                        ?? $entry['remaining_stock']
+                        ?? '-';
+                    $expiryDateValue = $entry['source_item_expiry_date'] ?? '-';
+                    $isExpired = false;
+                    if ($expiryDateValue !== '-' && $expiryDateValue !== null && $expiryDateValue !== '') {
+                        $isExpired = strtotime((string) $expiryDateValue) <= strtotime(now()->toDateString());
+                    }
+                    $hasRemainingStock = false;
+                    if (is_numeric($remainingQuantity)) {
+                        $hasRemainingStock = ((float) $remainingQuantity) > 0;
+                    }
+                    $isUnavailable = $isExpired || !$hasRemainingStock;
+                @endphp
                 <tr>
                     <td>{{ optional($entry['occurred_at'])->format('Y-m-d H:i') ?? '-' }}</td>
-                    {{-- <td>{{ strtoupper($entry['type'] ?? '-') }}</td> --}}
-                    <td>{{ $entry['category_name'] ?? '-' }}</td>
-                    <td>{{ $entry['sub_category_name'] ?? '-' }}</td>
-                    <td>{{ $entry['quantity'] ?? '-' }}</td>
+                    <td>{{ strtoupper($entry['type'] ?? '-') }}</td>
+                    <td>{{ $quantityDisplay }}</td>
                     <td>{{ $entry['unit'] !== '' ? $entry['unit'] : '-' }}</td>
-                    <td>{{ $entry['source_item_name'] ?? '-' }}</td>
+                    <td>{{ $remainingQuantity }}</td>
+                    <td>{{ $isUnavailable ? 'Unavailable' : 'Available' }}</td>
                     <td>{{ $entry['source_item_expiry_date'] ?? '-' }}</td>
-                    <td>{{ $entry['source_item_remaining_quantity'] ?? '-' }}</td>
+                    <td>{{ $entry['project_title'] ?? '-' }}</td>
+                    <td>{{ $entry['notes'] ?? '-' }}</td>
                 </tr>
             @empty
                 <tr>

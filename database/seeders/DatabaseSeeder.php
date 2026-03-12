@@ -12,6 +12,12 @@ use Database\Seeders\GDCategorySeeder;
 use Database\Seeders\ContactInforSeeder;
 use Database\Seeders\HomepageInfoSeeder;
 use Database\Seeders\KnowledgebaseSeeder;
+use Database\Seeders\ItemNameSeeder;
+use Database\Seeders\ProgramsSeeder;
+use Database\Seeders\CarouselImageSeeder;
+use Database\Seeders\InvolvementSeeder;
+use Database\Seeders\EncouragementSeeder;
+use Database\Seeders\QuotesSeeder;
 
 class DatabaseSeeder extends Seeder
 {
@@ -30,10 +36,16 @@ class DatabaseSeeder extends Seeder
             ProjectSeeder::class,
             EventsSeeder::class,
             GDCategorySeeder::class,
+            ItemNameSeeder::class,
             ContactInforSeeder::class,
             FaqsSeeder::class,
             OfficerSeeder::class,
-            HomepageInfoSeeder::class
+            HomepageInfoSeeder::class,
+            ProgramsSeeder::class,
+            CarouselImageSeeder::class,
+            InvolvementSeeder::class,
+            EncouragementSeeder::class,
+            QuotesSeeder::class
         ]);
     }
 }

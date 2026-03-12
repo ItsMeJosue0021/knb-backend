@@ -9,6 +9,7 @@ class InventoryItem extends Model
     protected $fillable = [
         'category_id',
         'sub_category_id',
+        'item_name',
         'quantity',
         'unit',
     ];
@@ -28,4 +29,3 @@ class InventoryItem extends Model
         return $this->hasMany(InventoryTransaction::class);
     }
 }
-

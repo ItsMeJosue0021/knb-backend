@@ -15,6 +15,10 @@ class InventoryTransaction extends Model
         'quantity',
         'occurred_at',
         'source_name',
+        'snapshot_name',
+        'snapshot_category_id',
+        'snapshot_sub_category_id',
+        'snapshot_unit',
         'unit',
         'notes',
     ];
@@ -38,9 +42,18 @@ class InventoryTransaction extends Model
         return $this->belongsTo(Item::class, 'source_item_id');
     }
 
+    public function snapshotCategory()
+    {
+        return $this->belongsTo(GDCategory::class, 'snapshot_category_id');
+    }
+
+    public function snapshotSubCategory()
+    {
+        return $this->belongsTo(GDSubcategory::class, 'snapshot_sub_category_id');
+    }
+
     public function project()
     {
         return $this->belongsTo(Project::class);
     }
 }
-

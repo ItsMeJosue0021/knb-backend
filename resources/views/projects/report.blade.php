@@ -6,7 +6,7 @@
     <title>Projects Report</title>
     <style>
         body {
-            font-family: "Poppins", DejaVu Sans, Arial, sans-serif;
+            font-family: Arial, sans-serif;
             font-size: 12px;
             color: #222;
         }

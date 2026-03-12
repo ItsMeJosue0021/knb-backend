@@ -192,6 +192,21 @@ class HomepageInfoController extends Controller
         return response()->json($quotes, 200);
     }
 
+    /**
+     * Return all homepage resources in a single payload.
+     */
+    public function getHomepageResources()
+    {
+        return response()->json([
+            'homepage_info' => HomepageInfo::first(),
+            'carousel_images' => CarouselImage::orderBy('created_at', 'desc')->get(),
+            'programs' => Programs::first(),
+            'encouragement' => Encouragement::first(),
+            'quotes' => Quotes::first(),
+            'involvement' => Involvement::first(),
+        ], 200);
+    }
+
     public function saveInvolvement(Request $request)
     {
         $validated = $request->validate([

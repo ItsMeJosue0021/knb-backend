@@ -7,6 +7,7 @@ use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\ItemController;
+use App\Http\Controllers\ItemNameController;
 use App\Http\Controllers\RoleController;
 use App\Http\Controllers\EmailController;
 use App\Http\Controllers\EventController;
@@ -77,6 +78,7 @@ Route::post('/contact-info', [ContactInfoController::class, 'update'])->middlewa
 
 Route::get('/homepage-info', [HomepageInfoController::class, 'show']);
 Route::put('/homepage-info', [HomepageInfoController::class, 'update'])->middleware(['auth:sanctum', 'role:admin']);
+Route::get('/homepage-resources', [HomepageInfoController::class, 'getHomepageResources']);
 
 
 Route::get('/homepage-carousel', [HomepageInfoController::class, 'getCarouselImages']);
@@ -230,12 +232,20 @@ Route::delete('/goods-donations/items/{id}', [ItemController::class, 'destroy'])
 Route::get('/items', [ItemController::class, 'getAllItems']);
 Route::get('/items/confirmed', [ItemController::class, 'confirmedItems']);
 Route::get('/items/confirmed/print', [ItemController::class, 'printConfirmedItems']);
+
+Route::get('/item-names/suggestions', [ItemNameController::class, 'suggestions']);
+Route::get('/item-names', [ItemNameController::class, 'index']);
+Route::post('/item-names', [ItemNameController::class, 'store']);
+Route::put('/item-names/{id}', [ItemNameController::class, 'update']);
+Route::delete('/item-names/{id}', [ItemNameController::class, 'destroy']);
+
 Route::get('/inventory', [InventoryController::class, 'index']);
 Route::get('/inventory/print', [InventoryController::class, 'printInventory']);
 Route::get('/inventory/history', [InventoryController::class, 'history']);
 Route::get('/inventory/history/print', [InventoryController::class, 'printHistory']);
 Route::get('/inventory/history/in', [InventoryController::class, 'inHistory']);
 Route::get('/inventory/history/out', [InventoryController::class, 'outHistory']);
+Route::post('/inventory/reconcile-history-items', [InventoryController::class, 'reconcileHistoryItems']);
 Route::get('/inventory/items/{inventoryItemId}/history', [InventoryController::class, 'historyByInventoryItem']);
 Route::get('/inventory/subcategories/{subcategoryId}/history', [InventoryController::class, 'historyBySubcategory']);
 Route::post('/inventory/sync-confirmed', [InventoryController::class, 'syncConfirmedItems']);
@@ -245,7 +255,6 @@ Route::post('/inventory/sync-confirmed', [InventoryController::class, 'syncConfi
 Route::get('/goods-donation-categories', [GDCategoryController::class, 'index']);
 // Goods Donation Subcategories
 Route::get('/goods-donation-subcategories', [GDSubcategoryController::class, 'index']);
-
 
 
 // Expenditures API routes

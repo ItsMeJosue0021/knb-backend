@@ -7,6 +7,7 @@ use App\Models\InventoryTransaction;
 use App\Services\InventoryService;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Schema;
 
 class InventoryController extends Controller
 {
@@ -31,7 +32,6 @@ class InventoryController extends Controller
     public function history(Request $request)
     {
         $validated = $this->validateHistoryFilters($request);
-        $validated = $this->expandInventoryItemFilterToSubcategory($validated);
 
         $history = $this->buildInventoryHistoryQuery($validated)
             ->orderByDesc('occurred_at')
@@ -64,8 +64,6 @@ class InventoryController extends Controller
     public function printHistory(Request $request)
     {
         $validated = $this->validateHistoryFilters($request);
-        $validated = $this->expandInventoryItemFilterToSubcategory($validated);
-        $validated['type'] = 'in';
 
         $history = $this->buildInventoryHistoryQuery($validated)
             ->orderByDesc('occurred_at')
@@ -95,33 +93,33 @@ class InventoryController extends Controller
 
     public function historyByInventoryItem(Request $request, int $inventoryItemId)
     {
-        // Inventory rows are grouped by subcategory in index(), so this endpoint
-        // receives subcategory IDs from some clients. Resolve that case first to
-        // avoid ID-collision mismatches (inventory_item.id vs sub_category_id).
-        $subcategoryId = null;
+        $forceItemHistory = filter_var($request->query('force_item', false), FILTER_VALIDATE_BOOLEAN);
 
-        $directSubcategoryExists = InventoryItem::query()
+        $inventoryItem = InventoryItem::find($inventoryItemId);
+
+        if ($inventoryItem) {
+            $request->merge([
+                'inventory_item_id' => $inventoryItem->id,
+            ]);
+
+            return $this->history($request);
+        }
+
+        $subcategoryExists = InventoryItem::query()
             ->where('sub_category_id', $inventoryItemId)
             ->exists();
 
-        if ($directSubcategoryExists) {
-            $subcategoryId = $inventoryItemId;
-        } else {
-            $inventoryItem = InventoryItem::find($inventoryItemId);
-            $subcategoryId = $inventoryItem ? (int) $inventoryItem->sub_category_id : null;
+        if (!$forceItemHistory && $subcategoryExists) {
+            return $this->historyBySubcategory($request, $inventoryItemId);
         }
 
-        if (empty($subcategoryId)) {
+        if (!$subcategoryExists) {
             return response()->json([
                 'message' => 'Inventory item or subcategory not found.',
             ], 404);
         }
 
-        $request->merge([
-            'sub_category' => $subcategoryId,
-        ]);
-
-        return $this->history($request);
+        return $this->historyBySubcategory($request, $inventoryItemId);
     }
 
     public function inHistory(Request $request)
@@ -152,6 +150,31 @@ class InventoryController extends Controller
         ], 200);
     }
 
+    public function reconcileHistoryItems(Request $request)
+    {
+        $validated = $request->validate([
+            'dry_run' => 'nullable|boolean',
+            'confirm' => 'nullable|boolean',
+        ]);
+
+        $dryRun = filter_var($validated['dry_run'] ?? true, FILTER_VALIDATE_BOOLEAN);
+
+        if (!$dryRun && !filter_var($validated['confirm'] ?? false, FILTER_VALIDATE_BOOLEAN)) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Confirmation required for non-dry-run reconcile.',
+                'hint' => 'Pass confirm=true to persist changes.',
+            ], 400);
+        }
+
+        $result = $this->inventoryService->reconcileInventoryHistoryItems($dryRun);
+
+        return response()->json([
+            'status' => 'success',
+            'result' => $result,
+        ], 200);
+    }
+
     private function validateInventoryFilters(Request $request): array
     {
         return $request->validate([
@@ -167,6 +190,7 @@ class InventoryController extends Controller
     {
         return $request->validate([
             'inventory_item_id' => 'nullable|integer',
+            'item_name' => 'nullable|string|max:255',
             'category' => 'nullable|integer|exists:g_d_categories,id',
             'sub_category' => 'nullable|integer|exists:g_d_subcategories,id',
             'unit' => 'nullable|string|max:50',
@@ -224,10 +248,17 @@ class InventoryController extends Controller
 
     private function buildInventoryHistoryQuery(array $validated)
     {
+        $hasInventoryItemName = Schema::hasColumn('inventory_items', 'item_name');
+        $hasInventoryTransactionSnapshotName = Schema::hasColumn('inventory_transactions', 'snapshot_name');
+        $hasInventoryTransactionSnapshotCategory = Schema::hasColumn('inventory_transactions', 'snapshot_category_id');
+        $hasInventoryTransactionSnapshotSubCategory = Schema::hasColumn('inventory_transactions', 'snapshot_sub_category_id');
+
         return InventoryTransaction::query()
             ->with([
                 'inventoryItem.categoryModel:id,name',
                 'inventoryItem.subCategoryModel:id,name',
+                'snapshotCategory:id,name',
+                'snapshotSubCategory:id,name',
                 'goodsDonation:id,name,email',
                 'sourceItem:id,name,image,expiry_date,quantity,unit',
                 'project:id,title,date',
@@ -236,20 +267,55 @@ class InventoryController extends Controller
                 $query->where('inventory_item_id', $validated['inventory_item_id']);
             })
             ->when(!empty($validated['category']), function ($query) use ($validated) {
-                $query->whereHas('inventoryItem', function ($sub) use ($validated) {
-                    $sub->where('category_id', $validated['category']);
+                $query->where(function ($scope) use ($validated, $hasInventoryTransactionSnapshotCategory) {
+                    if ($hasInventoryTransactionSnapshotCategory) {
+                        $scope->where('snapshot_category_id', $validated['category']);
+                    }
+
+                    $scope->orWhereHas('inventoryItem', function ($sub) use ($validated) {
+                        $sub->where('category_id', $validated['category']);
+                    });
                 });
             })
             ->when(!empty($validated['sub_category']), function ($query) use ($validated) {
-                $query->whereHas('inventoryItem', function ($sub) use ($validated) {
-                    $sub->where('sub_category_id', $validated['sub_category']);
+                $query->where(function ($scope) use ($validated, $hasInventoryTransactionSnapshotSubCategory) {
+                    if ($hasInventoryTransactionSnapshotSubCategory) {
+                        $scope->where('snapshot_sub_category_id', $validated['sub_category']);
+                    }
+
+                    $scope->orWhereHas('inventoryItem', function ($sub) use ($validated) {
+                        $sub->where('sub_category_id', $validated['sub_category']);
+                    });
+                });
+            })
+            ->when(!empty($validated['item_name']), function ($query) use ($validated, $hasInventoryItemName, $hasInventoryTransactionSnapshotName) {
+                $itemName = trim((string) $validated['item_name']);
+
+                $query->where(function ($nameQuery) use ($itemName, $hasInventoryItemName, $hasInventoryTransactionSnapshotName) {
+                    if ($hasInventoryItemName) {
+                        $nameQuery->whereHas('inventoryItem', function ($sub) use ($itemName) {
+                            $sub->where('item_name', $itemName);
+                        });
+                    }
+
+                    if ($hasInventoryTransactionSnapshotName) {
+                        $nameQuery->orWhere('snapshot_name', $itemName);
+                    }
+
+                    $nameQuery->orWhere('source_name', $itemName)
+                        ->orWhereHas('sourceItem', function ($sourceItemQuery) use ($itemName) {
+                            $sourceItemQuery->where('name', $itemName);
+                        });
                 });
             })
             ->when(!empty($validated['type']), function ($query) use ($validated) {
                 $query->where('type', $validated['type']);
             })
             ->when(!empty($validated['unit']), function ($query) use ($validated) {
-                $query->where('unit', trim($validated['unit']));
+                $query->where(function ($unitScope) use ($validated) {
+                    $unitScope->where('unit', trim($validated['unit']));
+                    $unitScope->orWhere('snapshot_unit', trim($validated['unit']));
+                });
             })
             ->when(!empty($validated['start_date']), function ($query) use ($validated) {
                 $query->whereDate('occurred_at', '>=', $validated['start_date']);
@@ -271,83 +337,60 @@ class InventoryController extends Controller
             });
     }
 
-    private function expandInventoryItemFilterToSubcategory(array $validated): array
-    {
-        if (empty($validated['inventory_item_id'])) {
-            return $validated;
-        }
-
-        $inventoryItem = InventoryItem::find($validated['inventory_item_id']);
-
-        if ($inventoryItem) {
-            $validated['sub_category'] = (int) $inventoryItem->sub_category_id;
-            unset($validated['inventory_item_id']);
-            return $validated;
-        }
-
-        $subcategoryId = (int) $validated['inventory_item_id'];
-        $subcategoryExists = InventoryItem::query()
-            ->where('sub_category_id', $subcategoryId)
-            ->exists();
-
-        if ($subcategoryExists) {
-            $validated['sub_category'] = $subcategoryId;
-            unset($validated['inventory_item_id']);
-        }
-
-        return $validated;
-    }
-
     private function getGroupedInventoryRows(array $validated)
     {
         $items = $this->buildInventoryQuery($validated)
             ->orderByDesc('quantity')
             ->orderBy('sub_category_id')
-            ->get();
+            ->orderBy('id')
+            ->get()
+            ->map(function (InventoryItem $item) {
+                $itemName = trim((string) $item->item_name);
+                $resolvedName = $itemName !== '' ? $itemName : $this->resolveInventoryItemDisplayName($item);
+                $unit = trim((string) $item->unit);
+                $unitValue = $unit === '' ? '-' : $unit;
 
-        return $items
-            ->groupBy('sub_category_id')
-            ->map(function ($group) {
-                /** @var \App\Models\InventoryItem $first */
-                $first = $group->first();
-
-                $unitBreakdown = $group->map(function ($item) {
-                    $unit = trim((string) $item->unit);
-
-                    return [
+                return array_merge($this->mapInventoryItem($item), [
+                    'inventory_item_name' => $resolvedName,
+                    'item_name' => $resolvedName,
+                    'unit' => $unitValue,
+                    'has_mixed_units' => false,
+                    'unit_breakdown' => [[
                         'inventory_item_id' => $item->id,
                         'quantity' => (int) $item->quantity,
-                        'unit' => $unit === '' ? '-' : $unit,
-                    ];
-                })->values();
-
-                $hasMixedUnits = $unitBreakdown->pluck('unit')->unique()->count() > 1;
-
-                return [
-                    // Use subcategory as grouped row identifier.
-                    'id' => $first->sub_category_id,
-                    'category' => $first->category_id,
-                    'category_name' => optional($first->categoryModel)->name,
-                    'sub_category' => $first->sub_category_id,
-                    'sub_category_name' => optional($first->subCategoryModel)->name,
-                    // Display-only combined quantity for grouped rows.
-                    'quantity' => (int) $group->sum('quantity'),
-                    'unit' => $hasMixedUnits ? 'mixed' : ($unitBreakdown->first()['unit'] ?? '-'),
-                    'has_mixed_units' => $hasMixedUnits,
-                    'unit_breakdown' => $unitBreakdown,
-                    'unit_breakdown_text' => $unitBreakdown
-                        ->map(function ($entry) {
-                            return $entry['quantity'] . ' ' . $entry['unit'];
-                        })
-                        ->implode(', '),
-                    'inventory_item_ids' => $group->pluck('id')->values(),
-                    'inventory_item_count' => $group->count(),
-                    'created_at' => $group->min('created_at'),
-                    'updated_at' => $group->max('updated_at'),
-                ];
+                        'unit' => $unitValue,
+                        'item_name' => $resolvedName,
+                    ]],
+                    'unit_breakdown_text' => ((int) $item->quantity) . ' ' . $unitValue,
+                    'inventory_item_ids' => [$item->id],
+                    'inventory_item_count' => 1,
+                ]);
             })
-            ->sortByDesc('quantity')
+            ->sort(function ($a, $b) {
+                $quantityA = (int) ($a['quantity'] ?? 0);
+                $quantityB = (int) ($b['quantity'] ?? 0);
+                if ($quantityA !== $quantityB) {
+                    return $quantityB <=> $quantityA;
+                }
+
+                $subcategoryA = (int) ($a['sub_category'] ?? 0);
+                $subcategoryB = (int) ($b['sub_category'] ?? 0);
+                if ($subcategoryA !== $subcategoryB) {
+                    return $subcategoryA <=> $subcategoryB;
+                }
+
+                $nameA = strtolower(trim((string) ($a['inventory_item_name'] ?? $a['item_name'] ?? '')));
+                $nameB = strtolower(trim((string) ($b['inventory_item_name'] ?? $b['item_name'] ?? '')));
+                $nameCompare = $nameA <=> $nameB;
+                if ($nameCompare !== 0) {
+                    return $nameCompare;
+                }
+
+                return (int) ($a['id'] ?? 0) <=> (int) ($b['id'] ?? 0);
+            })
             ->values();
+
+        return $items;
     }
 
     private function mapInventoryItem(InventoryItem $item): array
@@ -367,16 +410,24 @@ class InventoryController extends Controller
 
     private function mapInventoryHistoryEntry(InventoryTransaction $entry): array
     {
+        $itemName = $this->resolveHistoryInventoryItemName($entry);
+
         return [
             'id' => $entry->id,
             'inventory_item_id' => $entry->inventory_item_id,
-            'category' => optional($entry->inventoryItem)->category_id,
-            'category_name' => optional(optional($entry->inventoryItem)->categoryModel)->name,
-            'sub_category' => optional($entry->inventoryItem)->sub_category_id,
-            'sub_category_name' => optional(optional($entry->inventoryItem)->subCategoryModel)->name,
+            'item_name' => $itemName,
+            'inventory_item_name' => $itemName,
+            'category' => $entry->snapshot_category_id ?? optional($entry->inventoryItem)->category_id,
+            'category_name' => $entry->snapshot_category_id
+                ? optional($entry->snapshotCategory)->name
+                : optional(optional($entry->inventoryItem)->categoryModel)->name,
+            'sub_category' => $entry->snapshot_sub_category_id ?? optional($entry->inventoryItem)->sub_category_id,
+            'sub_category_name' => $entry->snapshot_sub_category_id
+                ? optional($entry->snapshotSubCategory)->name
+                : optional(optional($entry->inventoryItem)->subCategoryModel)->name,
             'type' => $entry->type,
             'quantity' => $entry->quantity,
-            'unit' => $entry->unit,
+            'unit' => $entry->snapshot_unit ?: $entry->unit,
             'occurred_at' => $entry->occurred_at,
             'goods_donation_id' => $entry->goods_donation_id,
             'goods_donation_name' => optional($entry->goodsDonation)->name,
@@ -393,5 +444,59 @@ class InventoryController extends Controller
             'created_at' => $entry->created_at,
             'updated_at' => $entry->updated_at,
         ];
+    }
+
+    private function resolveHistoryInventoryItemName(InventoryTransaction $entry): ?string
+    {
+        $snapshotName = trim((string) $entry->snapshot_name);
+        if ($snapshotName !== '') {
+            return $snapshotName;
+        }
+
+        $inventoryItemName = trim((string) optional($entry->inventoryItem)->item_name);
+        if ($inventoryItemName !== '') {
+            return $inventoryItemName;
+        }
+
+        $sourceName = trim((string) $entry->source_name);
+        if ($sourceName !== '') {
+            return $sourceName;
+        }
+
+        $sourceItemName = trim((string) optional($entry->sourceItem)->name);
+        if ($sourceItemName !== '') {
+            return $sourceItemName;
+        }
+
+        return 'Unknown item';
+    }
+
+    private function resolveInventoryItemDisplayName(InventoryItem $item): ?string
+    {
+        $itemName = trim((string) optional($item)->item_name);
+        if ($itemName !== '') {
+            return $itemName;
+        }
+
+        $sourceName = trim((string) InventoryTransaction::query()
+            ->where('inventory_item_id', $item->id)
+            ->whereNotNull('source_name')
+            ->orderByDesc('id')
+            ->value('source_name'));
+        if ($sourceName !== '') {
+            return $sourceName;
+        }
+
+        $sourceItemName = trim((string) InventoryTransaction::query()
+            ->where('inventory_item_id', $item->id)
+            ->whereNotNull('source_item_id')
+            ->orderByDesc('id')
+            ->with('sourceItem:id,name')
+            ->first()?->sourceItem?->name);
+        if ($sourceItemName !== '') {
+            return $sourceItemName;
+        }
+
+        return 'Unknown item';
     }
 }

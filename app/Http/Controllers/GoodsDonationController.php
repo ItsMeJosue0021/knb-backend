@@ -353,9 +353,15 @@ class GoodsDonationController extends Controller
                 'message' => 'Donation not found.',
             ], 404);
         } catch (Exception $e) {
+            Log::error('Unexpected error while approving goods donation.', [
+                'donation_id' => $id,
+                'error' => $e->getMessage(),
+            ]);
+
             return response()->json([
                 'status' => 'error',
                 'message' => 'An unexpected error occurred while approving donation.',
+                'debug' => app()->environment('local') ? $e->getMessage() : null,
             ], 500);
         }
     }
@@ -389,9 +395,15 @@ class GoodsDonationController extends Controller
                 'message' => 'Donation not found.',
             ], 404);
         } catch (Exception $e) {
+            Log::error('Unexpected error while approving goods donation (v2).', [
+                'donation_id' => $id,
+                'error' => $e->getMessage(),
+            ]);
+
             return response()->json([
                 'status' => 'error',
                 'message' => 'An unexpected error occurred while approving donation.',
+                'debug' => app()->environment('local') ? $e->getMessage() : null,
             ], 500);
         }
     }
@@ -422,20 +434,27 @@ class GoodsDonationController extends Controller
 
 
             if ($donation->email) {
-                $itemsList = $donation->items->map(function ($item) {
-                    $quantity = $item->quantity ?? 0;
-                    $unit = $item->unit ? " {$item->unit}" : '';
-                    return "- {$item->name} ({$quantity}{$unit})";
-                })->implode("\n");
+                try {
+                    $itemsList = $donation->items->map(function ($item) {
+                        $quantity = $item->quantity ?? 0;
+                        $unit = $item->unit ? " {$item->unit}" : '';
+                        return "- {$item->name} ({$quantity}{$unit})";
+                    })->implode("\n");
 
-                $body = "Hello {$donation->name},\n\n"
-                    . "We have received your goods donation. Thank you for your generosity.\n\n"
-                    . "Items received:\n{$itemsList}\n\n"
-                    . "If anything looks incorrect, please let us know.";
+                    $body = "Hello {$donation->name},\n\n"
+                        . "We have received your goods donation. Thank you for your generosity.\n\n"
+                        . "Items received:\n{$itemsList}\n\n"
+                        . "If anything looks incorrect, please let us know.";
 
-                Mail::raw($body, function ($message) use ($donation) {
-                    $message->to($donation->email)->subject('Goods donation received');
-                });
+                    Mail::raw($body, function ($message) use ($donation) {
+                        $message->to($donation->email)->subject('Goods donation received');
+                    });
+                } catch (Exception $mailException) {
+                    Log::warning('Failed to send donor confirmation email during goods donation approval.', [
+                        'donation_id' => $id,
+                        'error' => $mailException->getMessage(),
+                    ]);
+                }
             }
 
             return response()->json([
@@ -449,9 +468,15 @@ class GoodsDonationController extends Controller
                 'message' => 'Donation not found.',
             ], 404);
         } catch (Exception $e) {
+            Log::error('Unexpected error while approving goods donation (v2 with inventory sync/email).', [
+                'donation_id' => $id,
+                'error' => $e->getMessage(),
+            ]);
+
             return response()->json([
                 'status' => 'error',
                 'message' => 'An unexpected error occurred while approving donation.',
+                'debug' => app()->environment('local') ? $e->getMessage() : null,
             ], 500);
         }
     }

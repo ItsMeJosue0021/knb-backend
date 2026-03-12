@@ -5,7 +5,6 @@ namespace Database\Seeders;
 use App\Models\GDCategory;
 use App\Models\GDSubcategory;
 use Illuminate\Database\Seeder;
-use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 
 class GDCategorySeeder extends Seeder
 {
