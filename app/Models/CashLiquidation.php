@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\Expenditure;
 use Illuminate\Database\Eloquent\Model;
 
 class CashLiquidation extends Model
@@ -27,5 +28,10 @@ class CashLiquidation extends Model
     public function project()
     {
         return $this->belongsTo(Project::class);
+    }
+
+    public function expenditure()
+    {
+        return $this->hasOne(Expenditure::class, 'source_id')->where('source_type', 'project_liquidation');
     }
 }

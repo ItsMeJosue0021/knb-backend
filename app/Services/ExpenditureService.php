@@ -17,7 +17,7 @@ class ExpenditureService {
      */
     public function getAllExpenditures()
     {
-        return Expenditure::with('items')
+        return Expenditure::with(['items', 'project:id,title,date'])
             ->latest()
             ->get();
     }
@@ -29,7 +29,7 @@ class ExpenditureService {
      * @return mixed
      */
     public function getExpenditureById(int $id) {
-        return Expenditure::findOrFail($id);
+        return Expenditure::with(['items', 'project:id,title,date'])->findOrFail($id);
     }
 
     /**
@@ -133,13 +133,19 @@ class ExpenditureService {
      */
     public function searchExpenditures(string $term) {
         return Expenditure::query()
-            ->where('reference_number', 'like', "%{$term}%")
-            ->orWhere('name', 'like', "%{$term}%")
-            ->orWhere('description', 'like', "%{$term}%")
-            ->orWhere('amount', 'like', "%{$term}%")
-            ->orWhere('payment_method', 'like', "%{$term}%")
+            ->with(['items', 'project:id,title,date'])
+            ->where(function ($query) use ($term) {
+                $query->where('reference_number', 'like', "%{$term}%")
+                    ->orWhere('name', 'like', "%{$term}%")
+                    ->orWhere('description', 'like', "%{$term}%")
+                    ->orWhere('amount', 'like', "%{$term}%")
+                    ->orWhere('payment_method', 'like', "%{$term}%")
+                    ->orWhereHas('project', function ($projectQuery) use ($term) {
+                        $projectQuery->where('title', 'like', "%{$term}%");
+                    });
+            })
             ->get()
-            ->load('items');
+            ->loadMissing('items', 'project');
     }
 
     public function getExpendituresByDateRange(string $startDate, string $endDate) {

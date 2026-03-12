@@ -112,6 +112,8 @@
 
     <div class="section">
         <div><span class="label">Reference:</span> {{ $expenditure->reference_number }}</div>
+        <div><span class="label">Source:</span> {{ $expenditure->source_type === 'project_liquidation' ? 'Project Liquidation' : 'Manual Expense' }}</div>
+        <div><span class="label">Project:</span> {{ $expenditure->project?->title ?? '-' }}</div>
         <div><span class="label">Name:</span> {{ $expenditure->name }}</div>
         <div><span class="label">Date Incurred:</span> {{ $expenditure->date_incurred }}</div>
         <div><span class="label">Amount:</span> {{ $expenditure->amount }}</div>

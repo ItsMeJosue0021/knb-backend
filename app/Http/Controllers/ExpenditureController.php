@@ -33,7 +33,7 @@ class ExpenditureController extends Controller
         $startDate = $request->query('start_date');
         $endDate = $request->query('end_date');
 
-        $expenditures = Expenditure::with('items')
+        $expenditures = Expenditure::with(['items', 'project:id,title,date'])
             ->when($startDate, function ($query) use ($startDate) {
                 $query->whereDate('date_incurred', '>=', $startDate);
             })
@@ -84,6 +84,13 @@ class ExpenditureController extends Controller
      */
     public function update(int $id, UpdateExpenditureRequest $request) {
         try {
+            $expenditure = Expenditure::findOrFail($id);
+            if ($expenditure->source_type !== 'manual') {
+                return response([
+                    'message' => 'This expense is managed from project liquidation and cannot be edited here.',
+                ], 422);
+            }
+
             $data = $request->validated();
             $this->expenditureService->updateExpenditure($id, $data);
             return response(['message' => 'Expenditure has been updated!'], 200);
@@ -102,6 +109,13 @@ class ExpenditureController extends Controller
      */
     public function destroy(int $id) {
         try {
+            $expenditure = Expenditure::findOrFail($id);
+            if ($expenditure->source_type !== 'manual') {
+                return response([
+                    'message' => 'This expense is managed from project liquidation and cannot be deleted here.',
+                ], 422);
+            }
+
             $this->expenditureService->deleteExpenditure($id);
             return response(['message' => 'Expenditure has been deleted!'], 200);
         } catch(Exception $e) {
@@ -154,7 +168,7 @@ class ExpenditureController extends Controller
         $startDate = $request->query('start_date');
         $endDate = $request->query('end_date');
 
-        $expenditures = Expenditure::query()
+        $expenditures = Expenditure::with('project:id,title,date')
             ->when($startDate, function ($query) use ($startDate) {
                 $query->whereDate('date_incurred', '>=', $startDate);
             })
@@ -176,7 +190,7 @@ class ExpenditureController extends Controller
 
     public function printExpenditure(int $id)
     {
-        $expenditure = Expenditure::with('items')->findOrFail($id);
+        $expenditure = Expenditure::with(['items', 'project:id,title,date'])->findOrFail($id);
 
         $pdf = Pdf::loadView('expenditures.single-report', [
             'expenditure' => $expenditure,

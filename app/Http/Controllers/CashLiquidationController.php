@@ -3,8 +3,10 @@
 namespace App\Http\Controllers;
 
 use App\Models\CashLiquidation;
+use App\Models\Expenditure;
 use App\Models\Project;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 
 class CashLiquidationController extends Controller
@@ -62,7 +64,12 @@ class CashLiquidationController extends Controller
 
         $validated['project_id'] = $project->id;
 
-        $cashLiquidation = CashLiquidation::create($validated);
+        $cashLiquidation = DB::transaction(function () use ($validated) {
+            $cashLiquidation = CashLiquidation::create($validated);
+            $this->syncExpenseRecord($cashLiquidation);
+
+            return $cashLiquidation;
+        });
 
         return response()->json([
             'message' => 'Cash liquidation saved successfully.',
@@ -112,7 +119,10 @@ class CashLiquidationController extends Controller
             $validated['receipt'] = $request->file('receipt')->store('cash-liquidations', 'public');
         }
 
-        $cashLiquidation->update($validated);
+        DB::transaction(function () use ($cashLiquidation, $validated) {
+            $cashLiquidation->update($validated);
+            $this->syncExpenseRecord($cashLiquidation->fresh());
+        });
 
         return response()->json([
             'message' => 'Cash liquidation updated successfully.',
@@ -123,15 +133,50 @@ class CashLiquidationController extends Controller
     public function destroy(int $id)
     {
         $cashLiquidation = CashLiquidation::findOrFail($id);
+        $receiptPath = $cashLiquidation->receipt;
 
-        if (!empty($cashLiquidation->receipt) && Storage::disk('public')->exists($cashLiquidation->receipt)) {
-            Storage::disk('public')->delete($cashLiquidation->receipt);
+        DB::transaction(function () use ($cashLiquidation) {
+            Expenditure::query()
+                ->where('source_type', 'project_liquidation')
+                ->where('source_id', $cashLiquidation->id)
+                ->delete();
+
+            $cashLiquidation->delete();
+        });
+
+        if (!empty($receiptPath) && Storage::disk('public')->exists($receiptPath)) {
+            Storage::disk('public')->delete($receiptPath);
         }
-
-        $cashLiquidation->delete();
 
         return response()->json([
             'message' => 'Cash liquidation deleted successfully.',
         ], 200);
+    }
+
+    private function syncExpenseRecord(CashLiquidation $cashLiquidation): Expenditure
+    {
+        $project = $cashLiquidation->project()->select('id', 'title')->first();
+        $projectTitle = $project?->title ?: 'Untitled Project';
+        $pointPerson = trim((string) $cashLiquidation->point_person);
+
+        return Expenditure::updateOrCreate(
+            [
+                'source_type' => 'project_liquidation',
+                'source_id' => $cashLiquidation->id,
+            ],
+            [
+                'project_id' => $cashLiquidation->project_id,
+                'name' => 'Project Cash Liquidation',
+                'description' => 'Auto-generated from project liquidation for ' . $projectTitle . '.',
+                'amount' => $cashLiquidation->amount,
+                'date_incurred' => $cashLiquidation->date_used,
+                'payment_method' => 'Project Liquidation',
+                'notes' => $pointPerson !== ''
+                    ? 'Recorded from project cash liquidation. Point person: ' . $pointPerson . '.'
+                    : 'Recorded from project cash liquidation.',
+                'status' => 'recorded',
+                'attachment' => $cashLiquidation->receipt,
+            ]
+        );
     }
 }

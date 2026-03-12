@@ -10,6 +10,7 @@ use App\Models\Programs;
 use App\Models\Encouragement;
 use App\Models\Quotes;
 use App\Models\Involvement;
+use App\Models\WebsiteLogo;
 use Illuminate\Support\Facades\Storage;
 
 class HomepageInfoController extends Controller
@@ -207,6 +208,7 @@ class HomepageInfoController extends Controller
     {
         return response()->json([
             'homepage_info' => HomepageInfo::first(),
+            'website_logo' => WebsiteLogo::first(),
             'carousel_images' => CarouselImage::orderBy('created_at', 'desc')->get(),
             'programs' => Programs::first(),
             'encouragement' => Encouragement::first(),

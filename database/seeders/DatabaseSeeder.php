@@ -18,6 +18,7 @@ use Database\Seeders\CarouselImageSeeder;
 use Database\Seeders\InvolvementSeeder;
 use Database\Seeders\EncouragementSeeder;
 use Database\Seeders\QuotesSeeder;
+use Database\Seeders\WebsiteLogoSeeder;
 
 class DatabaseSeeder extends Seeder
 {
@@ -41,6 +42,7 @@ class DatabaseSeeder extends Seeder
             FaqsSeeder::class,
             OfficerSeeder::class,
             HomepageInfoSeeder::class,
+            WebsiteLogoSeeder::class,
             ProgramsSeeder::class,
             CarouselImageSeeder::class,
             InvolvementSeeder::class,

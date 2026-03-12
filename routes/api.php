@@ -1,8 +1,6 @@
 <?php
 
 use App\Http\Controllers\VolunteerRequestController;
-use App\Models\VolunteerRequest;
-use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\AuthController;
@@ -38,6 +36,7 @@ use App\Http\Controllers\HomepageInfoController;
 use App\Http\Controllers\ContactInfoController;
 use App\Http\Controllers\OfficersController;
 use App\Http\Controllers\GroqChatController;
+use App\Http\Controllers\WebsiteLogoController;
 
 Route::apiResource('roles', RoleController::class)->middleware('auth:sanctum');
 
@@ -79,6 +78,10 @@ Route::post('/contact-info', [ContactInfoController::class, 'update'])->middlewa
 Route::get('/homepage-info', [HomepageInfoController::class, 'show']);
 Route::put('/homepage-info', [HomepageInfoController::class, 'update'])->middleware(['auth:sanctum', 'role:admin']);
 Route::get('/homepage-resources', [HomepageInfoController::class, 'getHomepageResources']);
+
+Route::get('/website-logo', [WebsiteLogoController::class, 'show']);
+Route::post('/website-logo', [WebsiteLogoController::class, 'update'])->middleware(['auth:sanctum', 'role:admin']);
+Route::put('/website-logo', [WebsiteLogoController::class, 'update'])->middleware(['auth:sanctum', 'role:admin']);
 
 
 Route::get('/homepage-carousel', [HomepageInfoController::class, 'getCarouselImages']);
@@ -167,15 +170,6 @@ Route::get('/reports/goods-donations', [ReportController::class, 'GoodsDonations
 
 Route::post('/send-email', [EmailController::class, 'send']);
 Route::get('/template', [EmailController::class, 'template']);
-
-Route::get('/test-email', function () {
-    Mail::raw('This is a test email from Kalinga', function ($message) {
-        $message->to('joshuasalceda0021@gmail.com')
-            ->subject('Test Email from Kalinga');
-    });
-
-    return 'Email sent!';
-});
 
 Route::post('/payments/gcash', [PaymentController::class, 'createGCashPayment']);
 

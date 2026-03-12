@@ -111,6 +111,7 @@
             <tr>
                 <th style="width: 14%;">Date</th>
                 <th style="width: 18%;">Reference</th>
+                <th style="width: 18%;">Source</th>
                 <th style="width: 18%;">Name</th>
                 <th>Description</th>
                 <th style="width: 14%;">Amount</th>
@@ -122,6 +123,12 @@
             <tr>
                 <td>{{ $expenditure->date_incurred }}</td>
                 <td>{{ $expenditure->reference_number }}</td>
+                <td>
+                    {{ $expenditure->source_type === 'project_liquidation' ? 'Project Liquidation' : 'Manual' }}
+                    @if ($expenditure->project)
+                        <br><span class="muted">{{ $expenditure->project->title }}</span>
+                    @endif
+                </td>
                 <td>{{ $expenditure->name }}</td>
                 <td>{{ $expenditure->description }}</td>
                 <td>{{ $expenditure->amount }}</td>
@@ -129,7 +136,7 @@
             </tr>
         @empty
             <tr>
-                <td colspan="6" class="muted">No expenditures found for the selected date range.</td>
+                <td colspan="7" class="muted">No expenditures found for the selected date range.</td>
             </tr>
         @endforelse
         </tbody>
