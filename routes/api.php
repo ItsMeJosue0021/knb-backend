@@ -88,6 +88,7 @@ Route::delete('/homepage-carousel/{id}', [HomepageInfoController::class, 'delete
 Route::get('/programs-info', [HomepageInfoController::class, 'getProgramsInfo']);
 Route::put('/programs-info', [HomepageInfoController::class, 'savePrograms'])->middleware(['auth:sanctum', 'role:admin']);
 Route::get('/encouragement-info', [HomepageInfoController::class, 'getEncouragementInfo']);
+Route::post('/encouragement-info', [HomepageInfoController::class, 'saveEncouragement'])->middleware(['auth:sanctum', 'role:admin']);
 Route::put('/encouragement-info', [HomepageInfoController::class, 'saveEncouragement'])->middleware(['auth:sanctum', 'role:admin']);
 Route::get('/quotes-info', [HomepageInfoController::class, 'getQuotesInfo']);
 Route::put('/quotes-info', [HomepageInfoController::class, 'saveQuotes'])->middleware(['auth:sanctum', 'role:admin']);

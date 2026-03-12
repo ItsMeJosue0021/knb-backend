@@ -32,10 +32,18 @@ class HomepageInfoController extends Controller
         $validated = $request->validate([
             'welcome_message' => 'required|string',
             'intro_text' => 'required|string',
+            'primary_button_text' => 'nullable|string|max:80',
+            'primary_button_url' => 'nullable|string|max:255',
+            'secondary_button_text' => 'nullable|string|max:80',
+            'secondary_button_url' => 'nullable|string|max:255',
             'women_supported' => 'nullable|string',
+            'women_supported_label' => 'nullable|string|max:255',
             'meals_served' => 'nullable|string',
+            'meals_served_label' => 'nullable|string|max:255',
             'communities_reached' => 'nullable|string',
+            'communities_reached_label' => 'nullable|string|max:255',
             'number_of_volunteers' => 'nullable|string',
+            'number_of_volunteers_label' => 'nullable|string|max:255',
         ]);
 
         $info = HomepageInfo::first();
@@ -216,6 +224,7 @@ class HomepageInfoController extends Controller
             'involvements.*.id' => 'nullable|integer',
             'involvements.*.title' => 'required_with:involvements|string',
             'involvements.*.description' => 'required_with:involvements|string',
+            'involvements.*.action' => 'required_with:involvements|string|max:80',
             'involvements.*.url' => 'required_with:involvements|string',
         ]);
 
