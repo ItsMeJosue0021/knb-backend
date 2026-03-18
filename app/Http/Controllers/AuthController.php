@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\User;
+use App\Models\AdminActivityLog;
 use Illuminate\Http\Request;
 use Psy\Exception\Exception;
 use App\Services\UserService;
@@ -91,6 +92,7 @@ class AuthController extends Controller
         Log::info("User login successful: " . ($user->email ?? 'unknown'));
 
         $token = $user->createToken('auth_token')->plainTextToken;
+        $this->recordAdminAuthActivity($user, $request, 'Admin login.', 'Login successful.');
 
         return response([
             'user' => $user->load('role'),
@@ -103,9 +105,45 @@ class AuthController extends Controller
      */
     public function logout(Request $request)
     {
+        $user = $request->user('sanctum');
         $request->user()->tokens()->delete();
+        if ($user instanceof User) {
+            $this->recordAdminAuthActivity($user, $request, 'Admin logout.', 'Logout successful.');
+        }
 
         return response(['message' => 'Logged out'], 200);
+    }
+
+    private function recordAdminAuthActivity(User $user, Request $request, string $action, string $reason): void
+    {
+        if (!$user->isAdmin()) {
+            return;
+        }
+
+        try {
+            AdminActivityLog::create([
+                'actor_id' => $user->id,
+                'action' => $action,
+                'method' => strtoupper($request->method()),
+                'path' => $request->path(),
+                'status_code' => 200,
+                'severity' => 'low',
+                'metadata' => [
+                    'email' => $user->email,
+                    'reason' => $reason,
+                    'role' => optional($user->role)->name,
+                ],
+                'ip_address' => $request->ip(),
+                'user_agent' => $request->userAgent(),
+            ]);
+        } catch (\Throwable $e) {
+            Log::warning('Unable to record admin authentication activity log.', [
+                'admin_id' => $user->id,
+                'error' => $e->getMessage(),
+                'path' => $request->path(),
+                'action' => $action,
+            ]);
+        }
     }
 
     /**
