@@ -13,7 +13,7 @@ return Application::configure(basePath: dirname(__DIR__))
     )
     ->withMiddleware(function (Middleware $middleware) {
         $middleware->append(\Laravel\Sanctum\Http\Middleware\EnsureFrontendRequestsAreStateful::class);
-        // $middleware->append(\App\Http\Middleware\RoleMiddleware::class);
+        $middleware->appendToGroup('api', \App\Http\Middleware\AdminAuditMiddleware::class);
 
         $middleware->alias([
             'role' => \App\Http\Middleware\RoleMiddleware::class,
@@ -25,4 +25,3 @@ return Application::configure(basePath: dirname(__DIR__))
         });
 
     })->create();
-

@@ -38,20 +38,25 @@ use App\Http\Controllers\OfficersController;
 use App\Http\Controllers\GroqChatController;
 use App\Http\Controllers\UnitController;
 use App\Http\Controllers\WebsiteLogoController;
+use App\Http\Controllers\AdminActivityLogController;
 
-Route::apiResource('roles', RoleController::class)->middleware('auth:sanctum');
+Route::apiResource('roles', RoleController::class)->middleware(['auth:sanctum', 'role:super-admin']);
 
 Route::post('/register', [AuthController::class, 'register'])->name('register');
 Route::post('/login', [AuthController::class, 'login'])->name('login');
 Route::post('/logout', [AuthController::class, 'logout'])->middleware('auth:sanctum');
 Route::get('/user', [AuthController::class, 'user'])->middleware('auth:sanctum');
-Route::get('users', [AuthController::class, 'users'])->middleware('auth:sanctum');
-Route::get('/users/print', [AuthController::class, 'printUsers'])->middleware('auth:sanctum');
-Route::put('/users/{id}', [AuthController::class, 'update'])->middleware('auth:sanctum');
-Route::delete('/users/{id}', [AuthController::class, 'destroy'])->middleware('auth:sanctum');
+Route::get('users', [AuthController::class, 'users'])->middleware(['auth:sanctum', 'role:admin']);
+Route::get('/users/print', [AuthController::class, 'printUsers'])->middleware(['auth:sanctum', 'role:admin']);
+Route::put('/users/{id}', [AuthController::class, 'update'])->middleware(['auth:sanctum', 'role:admin']);
+Route::delete('/users/{id}', [AuthController::class, 'destroy'])->middleware(['auth:sanctum', 'role:admin']);
 
-Route::post('/archived-users/restore/{id}', [AuthController::class, 'restore'])->middleware('auth:sanctum');
-Route::get('/archived-users', [AuthController::class, 'archivedUsers'])->middleware('auth:sanctum');
+Route::post('/archived-users/restore/{id}', [AuthController::class, 'restore'])->middleware(['auth:sanctum', 'role:admin']);
+Route::get('/archived-users', [AuthController::class, 'archivedUsers'])->middleware(['auth:sanctum', 'role:admin']);
+Route::post('/users/{id}/role', [AuthController::class, 'updateRole'])->middleware(['auth:sanctum', 'role:super-admin']);
+
+Route::get('/admin-logs', [AdminActivityLogController::class, 'index'])->middleware(['auth:sanctum', 'role:super-admin']);
+Route::get('/admin-logs/print', [AdminActivityLogController::class, 'print'])->middleware(['auth:sanctum', 'role:super-admin']);
 
 Route::post('/users/change-password/{id}', [ProfileController::class, 'changePassword'])->middleware('auth:sanctum');
 Route::post('/users/profile-update/{id}', [ProfileController::class, 'update'])->middleware('auth:sanctum');
@@ -175,7 +180,7 @@ Route::get('/template', [EmailController::class, 'template']);
 Route::post('/payments/gcash', [PaymentController::class, 'createGCashPayment']);
 
 Route::post('/donations/cash/save', [CashDonationController::class, 'store']);
-Route::post('/donations/cash/{id}/confirm', [CashDonationController::class, 'confirmCashDonation']);
+Route::post('/donations/cash/{id}/confirm', [CashDonationController::class, 'confirmCashDonation'])->middleware(['auth:sanctum', 'role:admin']);
 Route::post('/donations/gcash/save', [GCashDonationController::class, 'store']);
 
 Route::post('/donations/gcash/webhook', [PaymentWebhookController::class, 'handle']);
@@ -192,9 +197,11 @@ Route::get('/cash-donations/filter', [CashDonationController::class, 'filter']);
 Route::get('/cash-donations/search', [CashDonationController::class, 'search']);
 Route::get('/cash-donations/stats', [CashDonationController::class, 'stats']);
 Route::get('/cash-donations/counts', [CashDonationController::class, 'counts']);
-Route::put('/cash-donations/{id}/approve', [CashDonationController::class, 'approve']);
 Route::get('/cash-donations/v2/print', [CashDonationController::class, 'cashDonations']);
-Route::put('/cash-donations/v2/{id}/approve', [CashDonationController::class, 'approve']);
+Route::put('/cash-donations/v2/{id}/approve', [CashDonationController::class, 'approve'])->middleware(['auth:sanctum', 'role:admin']);
+
+// Backward-compatible donation approval route (legacy frontend clients)
+Route::put('/cash-donations/{id}/approve', [CashDonationController::class, 'approve'])->middleware(['auth:sanctum', 'role:admin'])->name('cash-donations.approve');
 
 
 
@@ -209,8 +216,9 @@ Route::get('/goods-donations/v2/search', [GoodsDonationController::class, 'searc
 Route::get('/goods-donations/v2/stats', [GoodsDonationController::class, 'stats']);
 Route::get('/goods-donations/v2/counts', [GoodsDonationController::class, 'counts']);
 Route::get('/goods-donations/v2/print', [GoodsDonationController::class, 'goodsDonations']);
-Route::put('/goods-donations/v2/{id}/approve', [GoodsDonationController::class, 'testConfirmation']);
-Route::put('/goods-donations/v2/{id}/reject', [GoodsDonationController::class, 'reject']);
+Route::put('/goods-donations/{id}/approve', [GoodsDonationController::class, 'approve'])->middleware(['auth:sanctum', 'role:admin'])->name('goods-donations.approve');
+Route::put('/goods-donations/v2/{id}/approve', [GoodsDonationController::class, 'testConfirmation'])->middleware(['auth:sanctum', 'role:admin'])->name('goods-donations.v2.approve');
+Route::put('/goods-donations/v2/{id}/reject', [GoodsDonationController::class, 'reject'])->middleware(['auth:sanctum', 'role:admin'])->name('goods-donations.v2.reject');
 Route::get('/goods-donations/v2/suggestions', [GoodsDonationController::class, 'suggestItems']);
 
 

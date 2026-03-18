@@ -15,11 +15,18 @@ class RoleMiddleware
      */
     public function handle(Request $request, Closure $next, string $role): Response
     {
-        // Check if the user's role matches the required role
-        if ($request->user()->role->name !== $role) {
-            return response()->json(['message' => 'Forbidden'], 403);
+        $requiredRole = strtolower($role);
+        $userRole = strtolower((string) optional($request->user()?->role)->name);
+
+        // Super-admin can access admin routes, but admin cannot access super-admin routes.
+        if ($requiredRole === "admin" && in_array($userRole, ["admin", "super-admin"], true)) {
+            return $next($request);
         }
 
-        return $next($request);
+        if ($userRole === $requiredRole && $userRole !== "") {
+            return $next($request);
+        }
+
+        return response()->json(['message' => 'Forbidden'], 403);
     }
 }

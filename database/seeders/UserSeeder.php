@@ -3,6 +3,7 @@
 namespace Database\Seeders;
 
 use App\Models\User;
+use App\Models\Role;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\Hash;
 
@@ -13,6 +14,8 @@ class UserSeeder extends Seeder
      */
     public function run(): void
     {
+        $superAdminRoleId = Role::where('name', 'super-admin')->value('id') ?? 3;
+
         $users = [
             [
                 'first_name' => 'Margie',
@@ -61,9 +64,26 @@ class UserSeeder extends Seeder
                 'baranggy' => 'Barangay Dos',
                 'city' => 'Townsville',
                 'province' => 'Province B',
-                'email' => 'user@email.com',
+                'email' => 'joshuasalceda0021@gmail.com',
                 'password' => Hash::make('password'),
                 'role_id' => 2,
+            ],
+            [
+                'first_name' => 'Super',
+                'last_name' => 'Admin',
+                'middle_name' => null,
+                'contact_number' => '09123456789',
+                'username' => 'superadmin',
+                'block' => '1',
+                'lot' => '1',
+                'steet' => 'Admin Street',
+                'dubdivision' => 'Central Subdivision',
+                'baranggy' => 'Barangay Uno',
+                'city' => 'Cityville',
+                'province' => 'Province A',
+                'email' => 'super@admin.com',
+                'password' => Hash::make('password'),
+                'role_id' => $superAdminRoleId,
             ],
         ];
 

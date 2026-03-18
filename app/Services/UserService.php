@@ -14,9 +14,10 @@ class UserService
      * Summary of getAllUsers
      * @return \Illuminate\Database\Eloquent\Collection<int, User>
      */
-    public function getAllUsers(?string $searchTerm = null)
+    public function getAllUsers(?string $searchTerm = null, ?string $role = null)
     {
-        return User::where('is_archived', false)
+        return User::with('role')
+            ->where('is_archived', false)
             ->when($searchTerm, function ($query, $searchTerm) {
                 $like = '%' . $searchTerm . '%';
                 $query->where(function ($innerQuery) use ($like) {
@@ -24,6 +25,11 @@ class UserService
                         ->orWhere('last_name', 'like', $like)
                         ->orWhere('username', 'like', $like)
                         ->orWhere('email', 'like', $like);
+                });
+            })
+            ->when($role, function ($query, $role) {
+                $query->whereHas('role', function ($roleQuery) use ($role) {
+                    $roleQuery->where('name', $role);
                 });
             })
             ->latest()
@@ -72,7 +78,8 @@ class UserService
      */
     public function getArchivedUsers(?string $searchTerm = null)
     {
-        return User::where('is_archived', true)
+        return User::with('role')
+            ->where('is_archived', true)
             ->when($searchTerm, function ($query, $searchTerm) {
                 $like = '%' . $searchTerm . '%';
                 $query->where(function ($innerQuery) use ($like) {

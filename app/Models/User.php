@@ -69,6 +69,18 @@ class User extends Authenticatable
         return $this->belongsTo(Role::class);
     }
 
+    public function isAdmin(): bool
+    {
+        $role = strtolower((string) optional($this->role)->name);
+
+        return in_array($role, ['admin', 'super-admin'], true);
+    }
+
+    public function isSuperAdmin(): bool
+    {
+        return strtolower((string) optional($this->role)->name) === 'super-admin';
+    }
+
     public function profile()
     {
         return $this->hasOne(Profile::class);

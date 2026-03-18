@@ -132,9 +132,38 @@ class AuthController extends Controller
     public function users(Request $request)
     {
         $searchTerm = $request->input('serach', $request->input('search'));
+        $role = $request->input('role');
 
         return response([
-            'users' => $this->userService->getAllUsers($searchTerm)
+            'users' => $this->userService->getAllUsers($searchTerm, $role)
+        ], 200);
+    }
+
+    public function updateRole(Request $request, $id)
+    {
+        $validated = $request->validate([
+            'role_id' => 'required|integer|exists:roles,id',
+        ]);
+
+        $user = User::with('role')->findOrFail($id);
+        $roleId = (int) $validated['role_id'];
+
+        if (
+            $user->isSuperAdmin()
+            && $roleId !== $user->role_id
+            && User::whereHas('role', fn ($query) => $query->where('name', 'super-admin'))->count() <= 1
+        ) {
+            return response()->json([
+                'message' => 'At least one super-admin account must remain.',
+            ], 422);
+        }
+
+        $user->role_id = $roleId;
+        $user->save();
+
+        return response()->json([
+            'message' => 'User role updated successfully.',
+            'user' => $user->load('role'),
         ], 200);
     }
 
@@ -153,10 +182,12 @@ class AuthController extends Controller
     /**
      * Streams a PDF listing of all active users.
      */
-    public function printUsers()
+    public function printUsers(Request $request)
     {
         try {
-            $users = $this->userService->getAllUsers()->load('role');
+            $searchTerm = $request->input('search', null);
+            $role = $request->input('role', null);
+            $users = $this->userService->getAllUsers($searchTerm, $role);
 
             $pdf = Pdf::loadView('users.report', [
                 'users' => $users,
@@ -178,10 +209,39 @@ class AuthController extends Controller
         $user = User::findOrFail($id);
 
         $validatedData = $request->validate([
-            'name' => 'required|string|max:255',
+            'first_name' => 'nullable|string|max:255',
+            'middle_name' => 'nullable|string|max:255',
+            'last_name' => 'nullable|string|max:255',
+            'username' => 'nullable|string|max:255|unique:users,username,' . $id,
+            'contact_number' => 'nullable|string|max:20',
             'email' => 'required|email|unique:users,email,' . $id,
             'password' => 'nullable|min:6',
+            'name' => 'nullable|string|max:255',
         ]);
+
+        if (!empty($validatedData['name'])) {
+            $parts = preg_split('/\s+/', trim((string) $validatedData['name']), -1, PREG_SPLIT_NO_EMPTY);
+
+            if (
+                !empty($parts) &&
+                empty($validatedData['first_name']) &&
+                empty($validatedData['middle_name']) &&
+                empty($validatedData['last_name'])
+            ) {
+                $validatedData['first_name'] = $parts[0];
+                $validatedData['last_name'] = $parts[count($parts) - 1] ?: null;
+
+                if (count($parts) > 2) {
+                    array_shift($parts);
+                    array_pop($parts);
+                    $validatedData['middle_name'] = implode(' ', $parts);
+                } else {
+                    $validatedData['middle_name'] = null;
+                }
+            }
+
+            unset($validatedData['name']);
+        }
 
         if ($request->filled('password')) {
             if (!Hash::check($request->password, $user->password)) {
