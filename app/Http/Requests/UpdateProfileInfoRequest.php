@@ -22,9 +22,16 @@ class UpdateProfileInfoRequest extends FormRequest
     public function rules(): array
     {
         return [
+            'first_name' => 'nullable|string|max:255',
+            'firstName' => 'nullable|string|max:255',
+            'middle_name' => 'nullable|string|max:255',
+            'middleName' => 'nullable|string|max:255',
+            'last_name' => 'nullable|string|max:255',
+            'lastName' => 'nullable|string|max:255',
             'email' => 'required|email',
-            'contactNo' => 'required|string',
-            'username' => 'required|unique:users,username,' . $this->route('id'),
+            'contactNo' => 'nullable|string|max:20',
+            'contact_number' => 'nullable|string|max:20',
+            'username' => 'required|string|max:255',
             'block' => 'nullable|string',
             'lot' => 'nullable|string',
             'street' => 'nullable|string',
@@ -32,6 +39,9 @@ class UpdateProfileInfoRequest extends FormRequest
             'barangay' => 'nullable|string',
             'city' => 'nullable|string',
             'province' => 'nullable|string',
+            'steet' => 'nullable|string',
+            'dubdivision' => 'nullable|string',
+            'baranggy' => 'nullable|string',
         ];
     }
 }

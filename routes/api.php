@@ -58,9 +58,9 @@ Route::post('/users/{id}/role', [AuthController::class, 'updateRole'])->middlewa
 Route::get('/admin-logs', [AdminActivityLogController::class, 'index'])->middleware(['auth:sanctum', 'role:super-admin']);
 Route::get('/admin-logs/print', [AdminActivityLogController::class, 'print'])->middleware(['auth:sanctum', 'role:super-admin']);
 
-Route::post('/users/change-password/{id}', [ProfileController::class, 'changePassword'])->middleware('auth:sanctum');
-Route::post('/users/profile-update/{id}', [ProfileController::class, 'update'])->middleware('auth:sanctum');
-Route::post('/users/profile-picture/{id}', [ProfileController::class, 'uploadProfilePicture'])->middleware('auth:sanctum');
+Route::post('/users/change-password/{id}', [ProfileController::class, 'changePassword'])->middleware(['auth:sanctum', 'role:admin']);
+Route::post('/users/profile-update/{id}', [ProfileController::class, 'update'])->middleware(['auth:sanctum', 'role:admin']);
+Route::post('/users/profile-picture/{id}', [ProfileController::class, 'uploadProfilePicture'])->middleware(['auth:sanctum', 'role:admin']);
 
 Route::get('/membership-requests', [MembershipRequestController::class, 'index'])->middleware('auth:sanctum');
 Route::get('/membership-requests/me', [MembershipRequestController::class, 'myRequest'])->middleware('auth:sanctum');
