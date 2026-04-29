@@ -22,6 +22,8 @@ class SaveVolunteeringRequest extends FormRequest
      */
     public function rules(): array
     {
+        $isAuthenticatedVolunteer = auth('sanctum')->check() || $this->user() !== null;
+
         return [
             'first_name' => ['required', 'string', 'max:100'],
             'middle_name' => ['nullable', 'string', 'max:100'],
@@ -34,7 +36,15 @@ class SaveVolunteeringRequest extends FormRequest
                     return $query->where('project_id', $this->route('project_id'));
                 }),
             ],
-            'contact_number' => ['required', 'string', 'max:20']
+            'contact_number' => ['required', 'string', 'max:20'],
+            'address' => [$isAuthenticatedVolunteer ? 'nullable' : 'required', 'string', 'max:1000'],
+        ];
+    }
+
+    public function messages(): array
+    {
+        return [
+            'address.required' => 'Address is required.',
         ];
     }
 }

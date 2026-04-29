@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use App\Models\CashLiquidation;
+use App\Models\ProjectProposedResource;
 use App\Models\ProjectResource;
 
 class Project extends Model
@@ -25,6 +26,11 @@ class Project extends Model
     public function resources()
     {
         return $this->hasMany(ProjectResource::class);
+    }
+
+    public function proposedResources()
+    {
+        return $this->hasMany(ProjectProposedResource::class)->orderBy('display_order')->orderBy('id');
     }
 
     public function cashLiquidations()

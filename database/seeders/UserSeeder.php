@@ -64,7 +64,7 @@ class UserSeeder extends Seeder
                 'baranggy' => 'Barangay Dos',
                 'city' => 'Townsville',
                 'province' => 'Province B',
-                'email' => 'joshuasalceda0021@gmail.com',
+                'email' => 'john.doe@example.com',
                 'password' => Hash::make('password'),
                 'role_id' => 2,
             ],

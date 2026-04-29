@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Tag;
 use App\Models\Project;
 use App\Models\Item;
+use App\Models\ProjectProposedResource;
 use App\Models\ProjectResource;
 use App\Models\VolunteerRequest;
 use App\Services\InventoryService;
@@ -118,22 +119,25 @@ class ProjectController extends Controller
      */
     public function resources($projectId)
     {
-        $project = Project::with(['resources.item'])->findOrFail($projectId);
+        $project = Project::with([
+            'resources.item.categoryModel:id,name',
+            'resources.item.subCategoryModel:id,name',
+            'proposedResources.categoryModel:id,name',
+            'proposedResources.subCategoryModel:id,name',
+        ])->findOrFail($projectId);
 
         $resources = $project->resources->map(function ($resource) {
-            return [
-                'id' => $resource->id,
-                'item_id' => $resource->item_id,
-                'item_name' => optional($resource->item)->name,
-                'quantity' => $resource->quantity,
-                'created_at' => $resource->created_at,
-                'updated_at' => $resource->updated_at,
-            ];
-        });
+            return $this->formatActualResource($resource);
+        })->values()->all();
+
+        $proposedResources = $project->proposedResources->map(function ($resource) {
+            return $this->formatProposedResource($resource);
+        })->values()->all();
 
         return response()->json([
             'project_id' => $project->id,
             'resources' => $resources,
+            'proposed_resources' => $proposedResources,
         ]);
     }
 
@@ -200,33 +204,45 @@ class ProjectController extends Controller
             'tags.*' => 'string',
             'image' => 'nullable|image|max:2048',
             'is_event' => 'sometimes|boolean',
+            'proposed_resources' => 'nullable|array',
+            'proposed_resources.*.name' => 'required|string|max:255',
+            'proposed_resources.*.category_id' => 'nullable|integer|exists:g_d_categories,id',
+            'proposed_resources.*.sub_category_id' => 'nullable|integer|exists:g_d_subcategories,id',
+            'proposed_resources.*.quantity' => 'required|integer|min:1',
+            'proposed_resources.*.unit' => 'nullable|string|max:50',
+            'proposed_resources.*.notes' => 'nullable|string',
         ]);
 
 
         try {
-            $saved = Project::create([
-                'title' => $project['title'],
-                'date' => $project['date'],
-                'location' => $project['location'],
-                'description' => $project['description'],
-                'tags' => isset($project['tags']) ? implode(',', $project['tags']) : null,
-                'is_event' => $project['is_event'] ?? false,
-            ]);
+            $saved = null;
+            DB::transaction(function () use ($request, $project, &$saved) {
+                $saved = Project::create([
+                    'title' => $project['title'],
+                    'date' => $project['date'],
+                    'location' => $project['location'],
+                    'description' => $project['description'],
+                    'tags' => isset($project['tags']) ? implode(',', $project['tags']) : null,
+                    'is_event' => $project['is_event'] ?? false,
+                ]);
 
-            if ($request->hasFile('image')) {
-                $imagePath = $request->file('image')->store('projects', 'public');
-                $saved->image = $imagePath;
-                $saved->save();
-            }
-
-            if (!empty($project['tags'])) {
-                foreach ($project['tags'] as $tagText) {
-                    Tag::create([
-                        'text' => $tagText,
-                        'project_id' => $saved->id,
-                    ]);
+                if ($request->hasFile('image')) {
+                    $imagePath = $request->file('image')->store('projects', 'public');
+                    $saved->image = $imagePath;
+                    $saved->save();
                 }
-            }
+
+                if (!empty($project['tags'])) {
+                    foreach ($project['tags'] as $tagText) {
+                        Tag::create([
+                            'text' => $tagText,
+                            'project_id' => $saved->id,
+                        ]);
+                    }
+                }
+
+                $this->syncProposedResources($saved, $project['proposed_resources'] ?? []);
+            });
 
             return response()->json(['message' => 'Projects saved successfully.'], 201);
 
@@ -255,28 +271,55 @@ class ProjectController extends Controller
             'tags.*' => 'string',
             'image' => 'nullable|image|max:2048',
             'is_event' => 'sometimes|boolean',
+            'sync_proposed_resources' => 'sometimes|boolean',
+            'proposed_resources' => 'nullable|array',
+            'proposed_resources.*.name' => 'required|string|max:255',
+            'proposed_resources.*.category_id' => 'nullable|integer|exists:g_d_categories,id',
+            'proposed_resources.*.sub_category_id' => 'nullable|integer|exists:g_d_subcategories,id',
+            'proposed_resources.*.quantity' => 'required|integer|min:1',
+            'proposed_resources.*.unit' => 'nullable|string|max:50',
+            'proposed_resources.*.notes' => 'nullable|string',
         ]);
 
-        if ($request->hasFile('image')) {
-            $data['image'] = $request->file('image')->store('projects', 'public');
-        }
+        DB::transaction(function () use ($request, $project, &$data) {
+            if ($request->hasFile('image')) {
+                $data['image'] = $request->file('image')->store('projects', 'public');
+            }
 
-        $project->update($data);
+            $project->update(collect($data)->except('proposed_resources')->all());
 
-        if (isset($data['tags'])) {
-            $tagIds = collect($data['tags'])->map(function ($tagText) {
-                return Tag::firstOrCreate(['text' => $tagText])->id;
-            });
-            $project->tags()->sync($tagIds);
-        }
+            if (isset($data['tags'])) {
+                $tagIds = collect($data['tags'])->map(function ($tagText) {
+                    return Tag::firstOrCreate(['text' => $tagText])->id;
+                });
+                $project->tags()->sync($tagIds);
+            }
 
-        return response()->json($project->load('tags'));
+            if ($request->boolean('sync_proposed_resources')) {
+                $this->syncProposedResources($project, $data['proposed_resources'] ?? []);
+            }
+        });
+
+        return response()->json(
+            $this->formatProjectDetail(
+                $project->fresh([
+                    'tags',
+                    'proposedResources.categoryModel:id,name',
+                    'proposedResources.subCategoryModel:id,name',
+                ])
+            )
+        );
     }
 
     public function show($id)
     {
-        $project = Project::with('tags')->findOrFail($id);
-        return response()->json($project);
+        $project = Project::with([
+            'tags',
+            'proposedResources.categoryModel:id,name',
+            'proposedResources.subCategoryModel:id,name',
+        ])->findOrFail($id);
+
+        return response()->json($this->formatProjectDetail($project));
     }
 
     public function destroy($id)
@@ -358,11 +401,26 @@ class ProjectController extends Controller
 
     public function printLiquidatedItems(int $projectId)
     {
-        $project = Project::with(['resources.item'])->findOrFail($projectId);
+        $project = Project::with([
+            'resources.item.categoryModel:id,name',
+            'resources.item.subCategoryModel:id,name',
+            'proposedResources.categoryModel:id,name',
+            'proposedResources.subCategoryModel:id,name',
+        ])->findOrFail($projectId);
+
+        $actualResources = $project->resources->map(function ($resource) {
+            return $this->formatActualResource($resource);
+        })->values()->all();
+
+        $proposedResources = $project->proposedResources->map(function ($resource) {
+            return $this->formatProposedResource($resource);
+        })->values()->all();
 
         $pdf = Pdf::loadView('projects.liquidated-report', [
             'project' => $project,
-            'resources' => $project->resources,
+            'resources' => $actualResources,
+            'proposedResources' => $proposedResources,
+            'comparisonRows' => $this->buildResourceComparisonRows($proposedResources, $actualResources),
             'generatedAt' => now(),
         ])->setPaper('a4', 'portrait');
 
@@ -389,5 +447,168 @@ class ProjectController extends Controller
             'Content-Type' => 'application/pdf',
             'Content-Disposition' => 'inline; filename="' . $filename . '"',
         ]);
+    }
+
+    private function syncProposedResources(Project $project, array $resources): void
+    {
+        $project->proposedResources()->delete();
+
+        foreach (array_values($resources) as $index => $resource) {
+            $project->proposedResources()->create([
+                'name' => trim((string) ($resource['name'] ?? '')),
+                'category_id' => !empty($resource['category_id']) ? (int) $resource['category_id'] : null,
+                'sub_category_id' => !empty($resource['sub_category_id']) ? (int) $resource['sub_category_id'] : null,
+                'quantity' => (int) ($resource['quantity'] ?? 0),
+                'unit' => isset($resource['unit']) ? trim((string) $resource['unit']) : null,
+                'notes' => isset($resource['notes']) ? trim((string) $resource['notes']) : null,
+                'display_order' => $index,
+            ]);
+        }
+    }
+
+    private function formatProjectDetail(Project $project): array
+    {
+        return [
+            'id' => $project->id,
+            'title' => $project->title,
+            'date' => $project->date,
+            'location' => $project->location,
+            'description' => $project->description,
+            'tags' => $project->tags ? explode(',', $project->tags) : [],
+            'image' => $project->image,
+            'is_event' => $project->is_event,
+            'proposed_resources' => $project->proposedResources->map(function ($resource) {
+                return $this->formatProposedResource($resource);
+            })->values()->all(),
+        ];
+    }
+
+    private function formatProposedResource(ProjectProposedResource $resource): array
+    {
+        return [
+            'id' => $resource->id,
+            'name' => $resource->name,
+            'category_id' => $resource->category_id,
+            'category_name' => optional($resource->categoryModel)->name,
+            'sub_category_id' => $resource->sub_category_id,
+            'sub_category_name' => optional($resource->subCategoryModel)->name,
+            'quantity' => $resource->quantity,
+            'unit' => $resource->unit,
+            'notes' => $resource->notes,
+            'display_order' => $resource->display_order,
+            'created_at' => $resource->created_at,
+            'updated_at' => $resource->updated_at,
+        ];
+    }
+
+    private function formatActualResource(ProjectResource $resource): array
+    {
+        $item = $resource->item;
+
+        return [
+            'id' => $resource->id,
+            'project_resource_id' => $resource->id,
+            'item_id' => $resource->item_id,
+            'item_name' => optional($item)->name,
+            'name' => optional($item)->name,
+            'category_id' => optional($item)->category,
+            'category_name' => optional(optional($item)->categoryModel)->name,
+            'sub_category_id' => optional($item)->sub_category,
+            'sub_category_name' => optional(optional($item)->subCategoryModel)->name,
+            'quantity' => $resource->quantity,
+            'used_quantity' => $resource->quantity,
+            'unit' => optional($item)->unit,
+            'notes' => optional($item)->notes,
+            'created_at' => $resource->created_at,
+            'updated_at' => $resource->updated_at,
+        ];
+    }
+
+    private function buildResourceComparisonRows(array $proposedResources, array $actualResources): array
+    {
+        $rows = [];
+
+        foreach ($proposedResources as $proposed) {
+            $matchedActuals = array_values(array_filter($actualResources, function ($actual) use ($proposed) {
+                return $this->resourceEntriesMatch($proposed, $actual);
+            }));
+
+            $actualQuantity = array_reduce($matchedActuals, function ($sum, $actual) {
+                return $sum + (int) ($actual['quantity'] ?? $actual['used_quantity'] ?? 0);
+            }, 0);
+
+            $proposedQuantity = (int) ($proposed['quantity'] ?? 0);
+            $excessQuantity = $actualQuantity > $proposedQuantity ? $actualQuantity - $proposedQuantity : 0;
+            $status = $actualQuantity <= 0
+                ? 'missing'
+                : ($actualQuantity < $proposedQuantity
+                    ? 'partial'
+                    : ($actualQuantity > $proposedQuantity ? 'excess' : 'accomplished'));
+
+            $rows[] = [
+                'proposed' => $proposed,
+                'actual' => $matchedActuals,
+                'proposed_quantity' => $proposedQuantity,
+                'actual_quantity' => $actualQuantity,
+                'excess_quantity' => $excessQuantity,
+                'status' => $status,
+            ];
+        }
+
+        foreach ($actualResources as $actual) {
+            $hasMatchingProposal = collect($proposedResources)->contains(function ($proposed) use ($actual) {
+                return $this->resourceEntriesMatch($proposed, $actual);
+            });
+
+            if ($hasMatchingProposal) {
+                continue;
+            }
+
+            $rows[] = [
+                'proposed' => null,
+                'actual' => [$actual],
+                'proposed_quantity' => 0,
+                'actual_quantity' => (int) ($actual['quantity'] ?? $actual['used_quantity'] ?? 0),
+                'excess_quantity' => 0,
+                'status' => 'unplanned',
+            ];
+        }
+
+        return $rows;
+    }
+
+    private function resourceEntriesMatch(array $proposed, array $actual): bool
+    {
+        $proposedCategory = (string) ($proposed['category_id'] ?? '');
+        $actualCategory = (string) ($actual['category_id'] ?? '');
+        if ($proposedCategory !== '' && $actualCategory !== '' && $proposedCategory !== $actualCategory) {
+            return false;
+        }
+
+        $proposedSubcategory = (string) ($proposed['sub_category_id'] ?? '');
+        $actualSubcategory = (string) ($actual['sub_category_id'] ?? '');
+        if ($proposedSubcategory !== '' && $actualSubcategory !== '' && $proposedSubcategory !== $actualSubcategory) {
+            return false;
+        }
+
+        $proposedName = $this->normalizeResourceText((string) ($proposed['name'] ?? $proposed['item_name'] ?? ''));
+        $actualName = $this->normalizeResourceText((string) ($actual['name'] ?? $actual['item_name'] ?? ''));
+
+        if ($proposedName === '' || $actualName === '') {
+            return true;
+        }
+
+        return $proposedName === $actualName
+            || str_contains($proposedName, $actualName)
+            || str_contains($actualName, $proposedName);
+    }
+
+    private function normalizeResourceText(string $value): string
+    {
+        $value = strtolower(trim($value));
+        $value = preg_replace('/[^a-z0-9]+/', ' ', $value) ?? '';
+        $value = preg_replace('/\s+/', ' ', $value) ?? '';
+
+        return trim($value);
     }
 }

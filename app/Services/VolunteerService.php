@@ -9,6 +9,20 @@ use Illuminate\Support\Facades\Mail;
 
 class VolunteerService
 {
+    private function formatUserAddress($user): ?string
+    {
+        $parts = array_filter([
+            trim((string) ($user->block ?? '')),
+            trim((string) ($user->lot ?? '')),
+            trim((string) ($user->steet ?? '')),
+            trim((string) ($user->dubdivision ?? '')),
+            trim((string) ($user->baranggy ?? '')),
+            trim((string) ($user->city ?? '')),
+            trim((string) ($user->province ?? '')),
+        ]);
+
+        return !empty($parts) ? implode(', ', $parts) : null;
+    }
 
     /**
      * Summary of getAllRequests
@@ -58,6 +72,7 @@ class VolunteerService
         $user = auth('sanctum')->user() ?? Auth::user();
 
         $payload = array_merge($data, [
+            'address' => isset($data['address']) ? trim((string) $data['address']) : null,
             'project_id' => $project_id,
             'status' => 'pending',
             'is_user' => false,
@@ -73,6 +88,7 @@ class VolunteerService
             $payload['last_name'] = $user->last_name ?? $payload['last_name'];
             $payload['contact_number'] = $user->contact_number ?? $payload['contact_number'];
             $payload['email'] = $user->email ?? $payload['email'];
+            $payload['address'] = $this->formatUserAddress($user) ?? $payload['address'];
 
             $payload['is_user'] = true;
             $payload['user_id'] = $user->id;

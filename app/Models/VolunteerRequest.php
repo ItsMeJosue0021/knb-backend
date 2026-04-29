@@ -14,6 +14,7 @@ class VolunteerRequest extends Model
         'last_name',
         'email',
         'contact_number',
+        'address',
         'project_id',
         'user_id',
         'member_number',

@@ -107,33 +107,121 @@
     </div>
 
     <p class="report-description">
-        This report details the liquidated resources for the selected project, including item names, quantities, units, and notes.
-        It provides a formal record for post-activity documentation and resource utilization accountability.
+        This report details the proposed project resources beside the actual liquidated items used, including quantities, units, and notes.
+        It provides a formal reference for post-activity documentation, resource utilization accountability, and checking whether the planned materials were accomplished.
     </p>
 
-    <table>
-        <thead>
-            <tr>
-                <th style="width: 45%;">Item</th>
-                <th style="width: 15%;">Quantity</th>
-                <th style="width: 20%;">Unit</th>
-                <th>Notes</th>
-            </tr>
-        </thead>
-        <tbody>
-        @forelse ($resources as $resource)
-            <tr>
-                <td>{{ $resource->item?->name ?? 'Unknown item' }}</td>
-                <td>{{ $resource->quantity }}</td>
-                <td>{{ $resource->item?->unit ?? '-' }}</td>
-                <td>{{ $resource->item?->notes ?? '-' }}</td>
-            </tr>
-        @empty
-            <tr>
-                <td colspan="4" class="muted">No liquidated items found for this project.</td>
-            </tr>
-        @endforelse
-        </tbody>
-    </table>
+    <div class="section">
+        <div class="label" style="margin-bottom: 6px;">Planned vs Actual Comparison</div>
+        <table>
+            <thead>
+                <tr>
+                    <th style="width: 28%;">Proposed Item</th>
+                    <th style="width: 14%;">Proposed Qty</th>
+                    <th style="width: 28%;">Actual Item(s) Used</th>
+                    <th style="width: 14%;">Actual Qty</th>
+                    <th style="width: 16%;">Status</th>
+                </tr>
+            </thead>
+            <tbody>
+            @forelse ($comparisonRows as $row)
+                <tr>
+                    <td>
+                        @if (!empty($row['proposed']))
+                            <div>{{ $row['proposed']['name'] ?? '-' }}</div>
+                            <div class="muted">
+                                {{ $row['proposed']['category_name'] ?? 'Uncategorized' }}
+                                @if (!empty($row['proposed']['sub_category_name']))
+                                    &bull; {{ $row['proposed']['sub_category_name'] }}
+                                @endif
+                            </div>
+                            @if (!empty($row['proposed']['notes']))
+                                <div class="muted">Notes: {{ $row['proposed']['notes'] }}</div>
+                            @endif
+                        @else
+                            <span class="muted">No proposal</span>
+                        @endif
+                    </td>
+                    <td>
+                        @if (!empty($row['proposed']))
+                            {{ $row['proposed_quantity'] }} {{ $row['proposed']['unit'] ?? '' }}
+                        @else
+                            -
+                        @endif
+                    </td>
+                    <td>
+                        @if (!empty($row['actual']))
+                            @foreach ($row['actual'] as $actual)
+                                <div>{{ $actual['name'] ?? $actual['item_name'] ?? 'Unknown item' }}</div>
+                                <div class="muted">
+                                    {{ $actual['category_name'] ?? 'Uncategorized' }}
+                                    @if (!empty($actual['sub_category_name']))
+                                        &bull; {{ $actual['sub_category_name'] }}
+                                    @endif
+                                </div>
+                                @if (!empty($actual['notes']))
+                                    <div class="muted">Notes: {{ $actual['notes'] }}</div>
+                                @endif
+                                @if (!$loop->last)
+                                    <div style="height: 6px;"></div>
+                                @endif
+                            @endforeach
+                        @else
+                            <span class="muted">No actual items yet</span>
+                        @endif
+                    </td>
+                    <td>
+                        @if (($row['actual_quantity'] ?? 0) > 0)
+                            <div>{{ $row['actual_quantity'] }} {{ $row['actual'][0]['unit'] ?? ($row['proposed']['unit'] ?? '') }}</div>
+                            @if (($row['excess_quantity'] ?? 0) > 0)
+                                <div class="muted">Excess: +{{ $row['excess_quantity'] }} {{ $row['actual'][0]['unit'] ?? ($row['proposed']['unit'] ?? '') }}</div>
+                            @endif
+                        @else
+                            -
+                        @endif
+                    </td>
+                    <td style="text-transform: capitalize;">
+                        <div>{{ $row['status'] ?? 'missing' }}</div>
+                        @if (($row['excess_quantity'] ?? 0) > 0)
+                            <div class="muted">+{{ $row['excess_quantity'] }} over planned</div>
+                        @endif
+                    </td>
+                </tr>
+            @empty
+                <tr>
+                    <td colspan="5" class="muted">No proposed or liquidated items found for this project.</td>
+                </tr>
+            @endforelse
+            </tbody>
+        </table>
+    </div>
+
+    <div class="section">
+        <div class="label" style="margin-bottom: 6px;">Actual Liquidated Items</div>
+        <table>
+            <thead>
+                <tr>
+                    <th style="width: 45%;">Item</th>
+                    <th style="width: 15%;">Quantity</th>
+                    <th style="width: 20%;">Unit</th>
+                    <th>Notes</th>
+                </tr>
+            </thead>
+            <tbody>
+            @forelse ($resources as $resource)
+                <tr>
+                    <td>{{ $resource['name'] ?? $resource['item_name'] ?? 'Unknown item' }}</td>
+                    <td>{{ $resource['quantity'] ?? $resource['used_quantity'] ?? 0 }}</td>
+                    <td>{{ $resource['unit'] ?? '-' }}</td>
+                    <td>{{ $resource['notes'] ?? '-' }}</td>
+                </tr>
+            @empty
+                <tr>
+                    <td colspan="4" class="muted">No liquidated items found for this project.</td>
+                </tr>
+            @endforelse
+            </tbody>
+        </table>
+    </div>
 </body>
 </html>
