@@ -586,40 +586,39 @@ class GoodsDonationController extends Controller
 
     /**
      * Suggest item names for goods donations.
-     * Example: /api/goods-donations/suggestions?count=10&seed=food
+     * Example: /api/goods-donations/v2/suggestions?count=10&category=Food&subcategory=Rice
      */
     public function suggestItems(Request $request)
     {
         $validated = $request->validate([
             'count' => 'nullable|integer|min:3|max:20',
-            'seed' => 'nullable|string|max:100',
+            'seed' => 'nullable|string|max:255',
+            'q' => 'nullable|string|max:255',
+            'search' => 'nullable|string|max:255',
+            'category' => 'nullable|string|max:255',
+            'subcategory' => 'nullable|string|max:255',
         ]);
 
         $count = $validated['count'] ?? 10;
-        $seed = $validated['seed'] ?? '';
+        $query = trim($validated['q'] ?? ($validated['search'] ?? ''));
+        $category = trim($validated['category'] ?? '');
+        $subcategory = trim($validated['subcategory'] ?? '');
+        $seedParts = array_values(array_filter([$category, $subcategory, trim($validated['seed'] ?? '')]));
+        $seed = implode(' / ', array_unique($seedParts));
 
-        $fallback = [
-            'Rice',
-            'Canned sardines',
-            'Instant noodles',
-            'Canned corned beef',
-            'Bottled water',
-            'Sugar',
-            'Coffee',
-            'Cooking oil',
-            'Bath soap',
-            'Toothpaste',
-            'Laundry detergent',
-            'Diapers',
-            'Blankets',
-            'School supplies',
-            'Face masks',
-        ];
+        $fallback = $this->filterSuggestionList(
+            $this->buildFallbackSuggestions($category, $subcategory),
+            $query,
+            $count
+        );
 
         try {
             $prompt = "Provide {$count} highly realistic goods donation item names commonly donated in the Philippines."
-                . " Prefer everyday relief items actually donated by individuals and community drives (e.g., groceries, hygiene, baby items, household essentials, school supplies)."
+                . " Prefer everyday relief items actually donated by individuals and community drives."
                 . " Use natural item names (no brand names unless they are commonly used as generic terms)."
+                . ($category !== '' ? " The selected category is {$category}." : '')
+                . ($subcategory !== '' ? " The selected subcategory is {$subcategory}." : '')
+                . ($query !== '' ? " The donor has already typed '{$query}', so only return suggestions that match that text while staying inside the selected category and subcategory." : '')
                 . ($seed !== '' ? " Focus on: {$seed}." : '')
                 . " Return only a JSON array of strings (no extra text).";
 
@@ -642,10 +641,14 @@ class GoodsDonationController extends Controller
                 $decoded = json_decode($text, true);
 
                 if (is_array($decoded)) {
-                    $suggestions = array_values(array_unique(array_filter($decoded, 'is_string')));
+                    $suggestions = $this->filterSuggestionList($decoded, $query, $count);
                     if (!empty($suggestions)) {
+                        if (!empty($fallback) && count($suggestions) < $count) {
+                            $suggestions = $this->filterSuggestionList(array_merge($suggestions, $fallback), $query, $count);
+                        }
+
                         return response()->json([
-                            'suggestions' => array_slice($suggestions, 0, $count),
+                            'suggestions' => $suggestions,
                         ], 200);
                     }
                 }
@@ -657,7 +660,140 @@ class GoodsDonationController extends Controller
         }
 
         return response()->json([
-            'suggestions' => array_slice($fallback, 0, $count),
+            'suggestions' => $fallback,
         ], 200);
+    }
+
+    private function buildFallbackSuggestions(string $categoryName = '', string $subcategoryName = ''): array
+    {
+        $catalog = [
+            'food' => [
+                '__default' => ['Rice', 'Canned sardines', 'Instant noodles', 'Coffee sachets', 'Biscuits'],
+                'rice' => ['Well-milled rice', 'Brown rice', 'Jasmine rice', 'Rice packs', 'Rice sacks'],
+                'noodles pasta' => ['Spaghetti pasta', 'Macaroni pasta', 'Egg noodles', 'Rice noodles', 'Miswa noodles'],
+                'canned goods sardines corned beef meat loaf' => ['Canned sardines', 'Canned corned beef', 'Canned meat loaf', 'Canned tuna', 'Canned beans'],
+                'instant noodles' => ['Cup noodles', 'Pancit canton', 'Chicken instant noodles', 'Beef instant noodles', 'Vegetable instant noodles'],
+                'instant meals ready to eat food' => ['Instant oatmeal', 'Cup soup', 'Ready-to-eat arroz caldo', 'Ready-to-eat lugaw', 'Packed instant meals'],
+                'canned fish meat' => ['Canned tuna', 'Canned mackerel', 'Canned chicken spread', 'Canned luncheon meat', 'Canned corned beef'],
+                'coffee' => ['3-in-1 coffee sachets', 'Instant coffee', 'Ground coffee', 'Coffee creamer', 'Sugar sticks'],
+                'powdered drinks' => ['Powdered chocolate drink', 'Orange juice powder', 'Electrolyte drink powder', 'Powdered milk drink', 'Chocolate malt drink'],
+                'juice canned drinks' => ['Boxed juice', 'Canned pineapple juice', 'Canned orange juice', 'Fruit drink tetra packs', 'Ready-to-drink chocolate milk'],
+                'snacks biscuits' => ['Crackers', 'Oatmeal biscuits', 'Assorted cookies', 'Wafer snacks', 'Saltine biscuits'],
+                'baby food formula' => ['Infant formula', 'Toddler milk', 'Baby cereal', 'Baby food puree', 'Baby oatmeal'],
+                'bottled water' => ['500ml bottled water', '1-liter bottled water', 'Mineral water', 'Purified drinking water', 'Drinking water packs'],
+            ],
+            'clothings' => [
+                '__default' => ['Adult t-shirts', 'Children clothing', 'Jackets', 'Blankets', 'Footwear'],
+                'men tops' => ["Men's t-shirts", "Men's polo shirts", "Men's long-sleeve shirts", "Men's button-down shirts", "Men's sleeveless shirts"],
+                'men bottoms' => ["Men's jeans", "Men's shorts", "Men's jogger pants", "Men's slacks", "Men's cargo pants"],
+                'women tops' => ["Women's blouses", "Women's t-shirts", "Women's long-sleeve tops", "Women's polo shirts", "Women's sleeveless tops"],
+                'women bottoms' => ["Women's jeans", "Women's leggings", "Women's skirts", "Women's slacks", "Women's shorts"],
+                'children infants 0 2 yrs' => ['Infant onesies', 'Baby shirts', 'Baby shorts', 'Baby mittens', 'Baby socks'],
+                'children toddlers 3 5 yrs' => ['Toddler shirts', 'Toddler shorts', 'Toddler dresses', 'Toddler pajamas', 'Toddler sandals'],
+                'children kids 6 12 yrs' => ['Kids t-shirts', 'Kids shorts', 'Kids jeans', 'Kids dresses', 'Kids school clothes'],
+                'school uniforms' => ['School uniform sets', 'White polo shirts', 'School skirts', 'School pants', 'PE uniforms'],
+                'jackets sweaters' => ['Hooded jackets', 'Cardigans', 'Sweaters', 'Windbreakers', 'Fleece jackets'],
+                'sleepwear' => ['Adult pajamas', 'Kids pajamas', 'Nightgowns', 'Sleep shirts', 'Pajama sets'],
+                'footwear' => ['Rubber slippers', 'School shoes', 'Rubber shoes', 'Sandals', 'Sneakers'],
+                'undergarments' => ['Children underwear', 'Adult underwear', 'Undershirts', 'Socks', 'Brassieres'],
+                'bags belts' => ['Backpacks', 'Sling bags', 'Waist belts', 'School bags', 'Reusable tote bags'],
+                'bedding blankets bedsheets' => ['Blankets', 'Bedsheets', 'Pillowcases', 'Comforters', 'Sleeping mats'],
+                'towels' => ['Bath towels', 'Face towels', 'Hand towels', 'Baby towels', 'Washcloths'],
+            ],
+            'school supplies' => [
+                '__default' => ['Notebooks', 'Ballpens', 'Pencils', 'Crayons', 'School bags'],
+                'notebooks' => ['Spiral notebooks', 'Composition notebooks', 'Intermediate pads', 'Writing notebooks', 'Science notebooks'],
+                'writing tools pens pencils' => ['Ballpens', 'Pencils', 'Colored pens', 'Markers', 'Highlighters'],
+                'paper products bond paper pad paper' => ['Bond paper', 'Pad paper', 'Construction paper', 'Index cards', 'Colored paper'],
+                'school bags' => ['Backpacks', 'Trolley school bags', 'Drawstring bags', 'Lunch bags', 'School satchels'],
+                'lunch boxes' => ['Lunch boxes', 'Food containers', 'Water tumblers', 'Insulated lunch bags', 'Reusable utensils'],
+                'art materials crayons coloring materials' => ['Crayons', 'Colored pencils', 'Watercolor sets', 'Oil pastels', 'Sketch pads'],
+                'learning materials books workbooks' => ['Story books', 'Workbooks', 'Alphabet books', 'Math activity books', 'Reading books'],
+                'school kits pre packed sets' => ['School supply kits', 'Notebook and pen sets', 'Student starter kits', 'Art starter kits', 'Reading kits'],
+                'teaching supplies' => ['Whiteboard markers', 'Flash cards', 'Pocket charts', 'Class record books', 'Teaching posters'],
+            ],
+        ];
+
+        $generic = ['Rice', 'Canned sardines', 'Instant noodles', 'Blankets', 'Notebooks'];
+        $categoryKey = $this->normalizeSuggestionKey($categoryName);
+        $subcategoryKey = $this->normalizeSuggestionKey($subcategoryName);
+
+        if ($categoryKey === '' && $subcategoryKey === '') {
+            return $generic;
+        }
+
+        $suggestions = [];
+        $categorySuggestions = $catalog[$categoryKey] ?? [];
+
+        if ($subcategoryKey !== '' && isset($categorySuggestions[$subcategoryKey])) {
+            $suggestions = array_merge($suggestions, $categorySuggestions[$subcategoryKey]);
+        }
+
+        if (empty($suggestions) && $subcategoryKey !== '') {
+            foreach ($categorySuggestions as $key => $values) {
+                if ($key === '__default') {
+                    continue;
+                }
+
+                if (str_contains($key, $subcategoryKey) || str_contains($subcategoryKey, $key)) {
+                    $suggestions = array_merge($suggestions, $values);
+                }
+            }
+        }
+
+        if (isset($categorySuggestions['__default'])) {
+            $suggestions = array_merge($suggestions, $categorySuggestions['__default']);
+        }
+
+        return !empty($suggestions) ? $suggestions : [];
+    }
+
+    private function filterSuggestionList(array $suggestions, string $query, int $count): array
+    {
+        $normalized = [];
+
+        foreach ($suggestions as $suggestion) {
+            $name = trim((string) $suggestion);
+            if ($name === '') {
+                continue;
+            }
+
+            $normalized[strtolower($name)] = $name;
+        }
+
+        $ordered = array_values($normalized);
+        $query = strtolower(trim($query));
+
+        if ($query !== '') {
+            $prefixMatches = [];
+            $containsMatches = [];
+
+            foreach ($ordered as $suggestion) {
+                $value = strtolower($suggestion);
+                if (!str_contains($value, $query)) {
+                    continue;
+                }
+
+                if (str_starts_with($value, $query)) {
+                    $prefixMatches[] = $suggestion;
+                    continue;
+                }
+
+                $containsMatches[] = $suggestion;
+            }
+
+            $ordered = array_merge($prefixMatches, $containsMatches);
+        }
+
+        return array_slice($ordered, 0, $count);
+    }
+
+    private function normalizeSuggestionKey(string $value): string
+    {
+        $value = strtolower(trim($value));
+        $value = preg_replace('/[^a-z0-9]+/', ' ', $value) ?? '';
+        $value = preg_replace('/\s+/', ' ', $value) ?? '';
+
+        return trim($value);
     }
 }
