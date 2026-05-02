@@ -194,6 +194,7 @@ Route::get('/gcash-donations/search', [GCashDonationController::class, 'search']
 Route::get('/gcash-donations/stats', [GCashDonationController::class, 'stats']);
 Route::get('/gcash-donations/counts', [GCashDonationController::class, 'counts']);
 Route::get('/gcash-donations/print', [GCashDonationController::class, 'gcashDonations']);
+Route::put('/gcash-donations/{id}/approve', [GCashDonationController::class, 'approve'])->middleware(['auth:sanctum', 'role:admin']);
 
 Route::get('/cash-donations', [CashDonationController::class, 'index']);
 Route::get('/cash-donations/filter', [CashDonationController::class, 'filter']);

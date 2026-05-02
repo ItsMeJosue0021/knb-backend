@@ -11,10 +11,18 @@ class GCashDonation extends Model
         'name',
         'email',
         'amount',
+        'payment_channel',
+        'payment_reference_number',
+        'proof_of_payment',
         'paymongo_id',
         'status',
+        'confirmed_at',
         'month',
         'year',
+    ];
+
+    protected $casts = [
+        'confirmed_at' => 'datetime',
     ];
 
     protected static function boot()

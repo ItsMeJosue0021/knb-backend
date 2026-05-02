@@ -24,9 +24,16 @@ class GCashDonationController extends Controller
         try {
             $validated = $request->validated();
 
-            $payment = $this->donationService->processGCashDonation($validated);
+            $result = $this->donationService->processGCashDonation($validated);
 
-            return response()->json($payment, 200);
+            if (($validated['payment_channel'] ?? 'gateway') === 'qr') {
+                return response()->json([
+                    'message' => 'GCash QR donation submitted successfully and is pending verification.',
+                    'donation' => $result,
+                ], 201);
+            }
+
+            return response()->json($result, 200);
 
         } catch (Exception $e) {
             return response()->json([
@@ -40,7 +47,7 @@ class GCashDonationController extends Controller
      */
     public function index()
     {
-        $donations = GCashDonation::where('status', 'paid')->orderBy('created_at', 'desc')->get();
+        $donations = GCashDonation::orderBy('created_at', 'desc')->get();
         return response()->json($donations);
     }
 
@@ -63,7 +70,7 @@ class GCashDonationController extends Controller
             $query->where('month', $month);
         }
 
-        $donations = $query->orderBy('created_at', 'desc')->where('status', 'paid')->get();
+        $donations = $query->orderBy('created_at', 'desc')->get();
 
         return response()->json($donations);
     }
@@ -85,10 +92,11 @@ class GCashDonationController extends Controller
                 ->orWhere('name', 'like', "%{$search}%")
                 ->orWhere('email', 'like', "%{$search}%")
                 ->orWhere('amount', 'like', "%{$search}%")
+                ->orWhere('payment_channel', 'like', "%{$search}%")
+                ->orWhere('payment_reference_number', 'like', "%{$search}%")
                 ->orWhere('month', 'like', "%{$search}%")
                 ->orWhere('year', 'like', "%{$search}%");
         })
-            ->addBinding('paid', 'where')
             ->orderBy('created_at', 'desc')
             ->get();
 
@@ -155,7 +163,7 @@ class GCashDonationController extends Controller
 
     public function gcashDonations(Request $request)
     {
-        $query = GCashDonation::query();
+        $query = GCashDonation::where('status', 'paid');
 
         $from = $request->input('dateFrom');
         $to = $request->input('dateTo');
@@ -168,9 +176,32 @@ class GCashDonationController extends Controller
 
         return response()->json([
             'donations' => $donations,
-            'totalAmount' => number_format($donations->sum('amount'), 2, '.', ','),
+            'totalAmount' => $donations->sum('amount'),
             'totalCount' => $donations->count(),
         ]);
+    }
+
+    public function approve(int $id)
+    {
+        try {
+            $donation = $this->donationService->confirmQrGCashDonation($id);
+
+            return response()->json([
+                'status' => 'success',
+                'message' => 'GCash QR donation confirmed successfully.',
+                'data' => $donation,
+            ]);
+        } catch (\RuntimeException $e) {
+            return response()->json([
+                'status' => 'error',
+                'message' => $e->getMessage(),
+            ], 422);
+        } catch (Exception $e) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Unable to confirm the GCash QR donation.',
+            ], 500);
+        }
     }
 
 }
