@@ -208,6 +208,7 @@ class GoodsDonationController extends Controller
 
         $year = $request->input('year');
         $month = $request->input('month');
+        $search = trim((string) $request->input('q', $request->input('search', '')));
 
         $query = GoodsDonation::query();
 
@@ -217,6 +218,26 @@ class GoodsDonationController extends Controller
 
         if ($month) {
             $query->where('month', $month);
+        }
+
+        if ($search !== '') {
+            $like = "%{$search}%";
+            $query->where(function ($searchQuery) use ($like) {
+                $searchQuery
+                    ->where('name', 'like', $like)
+                    ->orWhere('email', 'like', $like)
+                    ->orWhere('description', 'like', $like)
+                    ->orWhere('address', 'like', $like)
+                    ->orWhere('status', 'like', $like)
+                    ->orWhere('month', 'like', $like)
+                    ->orWhere('year', 'like', $like)
+                    ->orWhereHas('items', function ($itemQuery) use ($like) {
+                        $itemQuery
+                            ->where('name', 'like', $like)
+                            ->orWhere('unit', 'like', $like)
+                            ->orWhere('notes', 'like', $like);
+                    });
+            });
         }
 
         $nearExpirationDays = (int) ($validated['near_expiration_days'] ?? 0);
@@ -246,22 +267,33 @@ class GoodsDonationController extends Controller
      */
     public function search(Request $request)
     {
-        $search = $request->input('q');
+        $search = trim((string) $request->input('q', $request->input('search', '')));
 
         if (!$search) {
             return response()->json([], 200);
         }
 
-        $donations = GoodsDonation::where(function ($query) use ($search) {
-            $query->where('name', 'like', "%{$search}%")
-                ->orWhere('email', 'like', "%{$search}%")
-                ->orWhere('description', 'like', "%{$search}%")
-                ->orWhere('address', 'like', "%{$search}%")
-                ->orWhere('month', 'like', "%{$search}%")
-                ->orWhere('year', 'like', "%{$search}%");
+        $like = "%{$search}%";
+
+        $donations = GoodsDonation::where(function ($query) use ($like) {
+            $query->where('name', 'like', $like)
+                ->orWhere('email', 'like', $like)
+                ->orWhere('description', 'like', $like)
+                ->orWhere('address', 'like', $like)
+                ->orWhere('status', 'like', $like)
+                ->orWhere('month', 'like', $like)
+                ->orWhere('year', 'like', $like)
+                ->orWhereHas('items', function ($itemQuery) use ($like) {
+                    $itemQuery
+                        ->where('name', 'like', $like)
+                        ->orWhere('unit', 'like', $like)
+                        ->orWhere('notes', 'like', $like);
+                });
         })
+            ->with('items')
             ->orderBy('created_at', 'desc')
-            ->get();
+            ->get()
+            ->loadCount('items');
 
         return response()->json($donations);
     }

@@ -119,6 +119,7 @@ Route::put('/faqs/{id}', [FaqsController::class, 'update'])->middleware(['auth:s
 Route::delete('/faqs/{id}', [FaqsController::class, 'destroy'])->middleware(['auth:sanctum', 'role:admin']);
 
 Route::get('members/search', [MemberController::class, 'search'])->middleware(['auth:sanctum', 'role:admin']);
+Route::get('members/{id}/form/print', [MemberController::class, 'printMembershipForm'])->middleware(['auth:sanctum', 'role:admin']);
 Route::apiResource('members', MemberController::class)->middleware(['auth:sanctum', 'role:admin']);
 
 Route::apiResource('emergency-contacts', EmergencyContactController::class)->middleware(['auth:sanctum', 'role:admin']);

@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Member;
 use Illuminate\Http\Request;
 use App\Services\MemberService;
+use Barryvdh\DomPDF\Facade\Pdf;
 use App\Services\EmergencyContactService;
 
 class MemberController extends Controller
@@ -30,6 +31,25 @@ class MemberController extends Controller
         return response()->json($member);
     }
 
+    public function printMembershipForm($id)
+    {
+        $member = Member::with('emergencyContact')->findOrFail($id);
+
+        $pdf = Pdf::loadView('members.membership-form', [
+            'member' => $member,
+            'emergency' => $member->emergencyContact,
+            'logoPath' => public_path('logo.png'),
+        ])->setPaper('letter', 'portrait');
+
+        $safeName = preg_replace(
+            '/[^A-Za-z0-9_-]+/',
+            '-',
+            trim(($member->first_name ?? '') . '-' . ($member->last_name ?? 'member'))
+        );
+
+        return $pdf->stream("membership-form-{$member->id}-{$safeName}.pdf");
+    }
+
     public function store(Request $request)
     {
         $validatedData = $request->validate([
@@ -52,7 +72,7 @@ class MemberController extends Controller
 
 
         $memberData = [
-            'member_id' => $this->generateMemberId(),
+            'member_number' => $this->generateMemberNumber(),
             'first_name' => $request->input('first_name'),
             'middle_name' => $request->input('middle_name'),
             'last_name' => $request->input('last_name'),
@@ -158,29 +178,40 @@ class MemberController extends Controller
 
     public function search(Request $request)
     {
-        $query = $request->input('search');
+        $query = trim((string) $request->input('search', ''));
 
-        $members = Member::where('first_name', 'like', "%{$query}%")
-            ->orWhere('member_id', 'like', "%{$query}%")
-            ->orWhere('middle_name', 'like', "%{$query}%")
-            ->orWhere('last_name', 'like', "%{$query}%")
-            ->orWhere('nick_name', 'like', "%{$query}%")
-            ->orWhere('fb_messenger_account', 'like', "%{$query}%")
-            ->get()->load('emergencyContact');
+        if ($query === '') {
+            return response()->json([], 200);
+        }
+
+        $like = "%{$query}%";
+
+        $members = Member::with('emergencyContact')
+            ->where(function ($memberQuery) use ($like) {
+                $memberQuery
+                    ->where('first_name', 'like', $like)
+                    ->orWhere('member_number', 'like', $like)
+                    ->orWhere('middle_name', 'like', $like)
+                    ->orWhere('last_name', 'like', $like)
+                    ->orWhere('nick_name', 'like', $like)
+                    ->orWhere('fb_messenger_account', 'like', $like)
+                    ->orWhere('contact_number', 'like', $like);
+            })
+            ->get();
 
         return response()->json($members, 200);
     }
 
-    public function generateMemberId()
+    public function generateMemberNumber()
     {
         $latestMember = Member::orderBy('id', 'desc')->first();
 
-        if (!$latestMember || !$latestMember->member_id) {
+        if (!$latestMember || !$latestMember->member_number) {
             return 'MEM-0001';
         }
 
         // Extract numeric part, e.g. "0001" from "MEM-0001"
-        $lastNumber = (int) str_replace('MEM-', '', $latestMember->member_id);
+        $lastNumber = (int) str_replace('MEM-', '', $latestMember->member_number);
 
         // Increment and pad with zeroes
         $newNumber = str_pad($lastNumber + 1, 4, '0', STR_PAD_LEFT);

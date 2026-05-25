@@ -72,6 +72,7 @@ class CashDonationController extends Controller
     {
         $year = $request->input('year');
         $month = $request->input('month');
+        $search = trim((string) $request->input('q', $request->input('search', '')));
 
         $query = CashDonation::query();
 
@@ -81,6 +82,21 @@ class CashDonationController extends Controller
 
         if ($month) {
             $query->where('month', $month);
+        }
+
+        if ($search !== '') {
+            $like = "%{$search}%";
+            $query->where(function ($searchQuery) use ($like) {
+                $searchQuery
+                    ->where('donation_tracking_number', 'like', $like)
+                    ->orWhere('name', 'like', $like)
+                    ->orWhere('email', 'like', $like)
+                    ->orWhere('amount', 'like', $like)
+                    ->orWhere('drop_off_address', 'like', $like)
+                    ->orWhere('status', 'like', $like)
+                    ->orWhere('month', 'like', $like)
+                    ->orWhere('year', 'like', $like);
+            });
         }
 
         $donations = $query->orderBy('created_at', 'desc')->get();
@@ -94,19 +110,24 @@ class CashDonationController extends Controller
      */
     public function search(Request $request)
     {
-        $search = $request->input('q');
+        $search = trim((string) $request->input('q', $request->input('search', '')));
 
         if (!$search) {
             return response()->json([], 200);
         }
 
+        $like = "%{$search}%";
+
         $donations = CashDonation::where(function ($query) use ($search) {
-            $query->where('donation_tracking_number', 'like', "%{$search}%")
-                ->orWhere('name', 'like', "%{$search}%")
-                ->orWhere('email', 'like', "%{$search}%")
-                ->orWhere('amount', 'like', "%{$search}%")
-                ->orWhere('month', 'like', "%{$search}%")
-                ->orWhere('year', 'like', "%{$search}%");
+            $like = "%{$search}%";
+            $query->where('donation_tracking_number', 'like', $like)
+                ->orWhere('name', 'like', $like)
+                ->orWhere('email', 'like', $like)
+                ->orWhere('amount', 'like', $like)
+                ->orWhere('drop_off_address', 'like', $like)
+                ->orWhere('status', 'like', $like)
+                ->orWhere('month', 'like', $like)
+                ->orWhere('year', 'like', $like);
         })
             ->orderBy('created_at', 'desc')
             ->get();

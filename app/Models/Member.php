@@ -9,7 +9,6 @@ use Illuminate\Database\Eloquent\Model;
 class Member extends Model
 {
     protected $fillable = [
-        'member_id',
         'member_number',
         'first_name',
         'middle_name',
