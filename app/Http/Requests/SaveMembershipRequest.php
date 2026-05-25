@@ -24,7 +24,14 @@ class SaveMembershipRequest extends FormRequest
         return [
             'proof_of_payment' => ['required', 'file', 'image', 'mimes:jpeg,jpg,png', 'max:5120'],
             'proof_of_identity' => ['required', 'file', 'image', 'mimes:jpeg,jpg,png', 'max:5120'],
-            'payment_reference_number' => ['required', 'string', 'max:255'],
+            'payment_reference_number' => ['required', 'string', 'max:13'],
+        ];
+    }
+
+    public function messages()
+    {
+        return [
+            'payment_reference_number.max' => 'The payment reference number must not exceed 13 characters.',
         ];
     }
 }

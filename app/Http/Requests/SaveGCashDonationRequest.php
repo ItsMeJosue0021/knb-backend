@@ -33,7 +33,7 @@ class SaveGCashDonationRequest extends FormRequest
                 Rule::requiredIf($channel === 'qr'),
                 'nullable',
                 'string',
-                'max:255',
+                'max:13',
             ],
             'proof_of_payment' => [
                 Rule::requiredIf($channel === 'qr'),
@@ -52,6 +52,7 @@ class SaveGCashDonationRequest extends FormRequest
             'amount.required' => 'Please enter the donation amount.',
             'amount.numeric' => 'The donation amount must be a number.',
             'payment_reference_number.required' => 'Please enter the payment reference number.',
+            'payment_reference_number.max' => 'The payment reference number must not exceed 13 characters.',
             'proof_of_payment.required' => 'Please upload the proof of payment.',
             'proof_of_payment.image' => 'The proof of payment must be an image.',
             'proof_of_payment.mimes' => 'The proof of payment must be a JPG or PNG image.',
