@@ -162,4 +162,68 @@ class ExpenditureService {
         return $totalGCash + $totalCash;
     }
 
+    public function getBalanceHistory()
+    {
+        $cashDonations = CashDonation::query()
+            ->where('status', 'approved')
+            ->get()
+            ->map(function ($donation) {
+                $date = $donation->drop_off_date
+                    ?: optional($donation->updated_at)->toDateString()
+                    ?: optional($donation->created_at)->toDateString();
+
+                return [
+                    'id' => 'cash-' . $donation->id,
+                    'date' => $date,
+                    'type' => 'income',
+                    'source' => 'Cash Donation',
+                    'description' => $donation->name ?: 'Anonymous donor',
+                    'tracking_number' => $donation->donation_tracking_number,
+                    'amount' => (float) $donation->amount,
+                ];
+            });
+
+        $gcashDonations = GCashDonation::query()
+            ->where('status', 'paid')
+            ->get()
+            ->map(function ($donation) {
+                $date = optional($donation->confirmed_at)->toDateString()
+                    ?: optional($donation->updated_at)->toDateString()
+                    ?: optional($donation->created_at)->toDateString();
+
+                return [
+                    'id' => 'gcash-' . $donation->id,
+                    'date' => $date,
+                    'type' => 'income',
+                    'source' => 'GCash Donation',
+                    'description' => $donation->name ?: 'Anonymous donor',
+                    'tracking_number' => $donation->donation_tracking_number,
+                    'amount' => (float) $donation->amount,
+                ];
+            });
+
+        $expenses = Expenditure::query()
+            ->with('project:id,title')
+            ->get()
+            ->map(function ($expense) {
+                return [
+                    'id' => 'expense-' . $expense->id,
+                    'date' => $expense->date_incurred,
+                    'type' => 'expense',
+                    'source' => optional($expense->project)->title ?: 'Expense',
+                    'description' => $expense->name,
+                    'tracking_number' => $expense->reference_number,
+                    'amount' => (float) $expense->amount,
+                ];
+            });
+
+        return $cashDonations
+            ->concat($gcashDonations)
+            ->concat($expenses)
+            ->sortByDesc(function ($entry) {
+                return $entry['date'] ?: '';
+            })
+            ->values();
+    }
+
 }

@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Mail\KalingaEmail;
 use App\Models\CashDonation;
 use App\Models\GCashDonation;
 use App\Services\PayMongoService;
@@ -30,12 +31,10 @@ class DonationService
             $name = $donation->name ?? 'Someone';
             $amount = number_format($donation->amount, 2);
 
-            Mail::raw(
-                "$name will be donating ₱$amount in cash at your $address on $donation->drop_off_date at $donation->drop_off_time.",
-                function ($msg) use ($adminEmail) {
-                    $msg->to($adminEmail)->subject('Upcoming Cash Donation');
-                }
-            );
+            Mail::to($adminEmail)->send(new KalingaEmail(
+                'Upcoming Cash Donation',
+                "$name will be donating ₱$amount in cash at your $address on $donation->drop_off_date at $donation->drop_off_time."
+            ));
 
             $address = '';
             switch ($donation->drop_off_address) {
@@ -51,12 +50,10 @@ class DonationService
             }
 
             if ($donation->email) {
-                Mail::raw(
-                    "Please proceed to $address to hand in your cash donation on $donation->drop_off_date at $donation->drop_off_time. Thank you so much.",
-                    function ($msg) use ($donation) {
-                        $msg->to($donation->email)->subject('Donation Instructions');
-                    }
-                );
+                Mail::to($donation->email)->send(new KalingaEmail(
+                    'Donation Instructions',
+                    "Please proceed to $address to hand in your cash donation on $donation->drop_off_date at $donation->drop_off_time. Thank you so much."
+                ));
             }
         }
 
@@ -88,12 +85,10 @@ class DonationService
             $amount = number_format($donation->amount, 2);
             $reference = $donation->payment_reference_number ?? 'N/A';
 
-            Mail::raw(
-                "$name submitted a GCash QR donation of ₱$amount with tracking number $donation->donation_tracking_number and reference number $reference. Please review and confirm it in the admin panel.",
-                function ($msg) use ($adminEmail) {
-                    $msg->to($adminEmail)->subject('GCash QR Donation Pending Verification');
-                }
-            );
+            Mail::to($adminEmail)->send(new KalingaEmail(
+                'GCash QR Donation Pending Verification',
+                "$name submitted a GCash QR donation of ₱$amount with tracking number $donation->donation_tracking_number and reference number $reference. Please review and confirm it in the admin panel."
+            ));
 
             return $donation;
         }
@@ -119,20 +114,16 @@ class DonationService
         $amount = number_format($donation->amount, 2);
 
         if ($donation) {
-            Mail::raw(
-                "$name has donated ₱$amount through GCash with donation tracking number $donation->donation_tracking_number.",
-                function ($msg) use ($adminEmail) {
-                    $msg->to($adminEmail)->subject('New GCash Donation');
-                }
-            );
+            Mail::to($adminEmail)->send(new KalingaEmail(
+                'New GCash Donation',
+                "$name has donated ₱$amount through GCash with donation tracking number $donation->donation_tracking_number."
+            ));
 
             if ($donation->email) {
-                Mail::raw(
-                    "We have received your GCash donation. Thank you and may God bless you! ",
-                    function ($msg) use ($donation) {
-                        $msg->to($donation->email)->subject('GCash Donation Received');
-                    }
-                );
+                Mail::to($donation->email)->send(new KalingaEmail(
+                    'GCash Donation Received',
+                    "We have received your GCash donation. Thank you and may God bless you! "
+                ));
             }
         }
 
@@ -158,20 +149,16 @@ class DonationService
         $adminEmail = 'margeiremulta@gmail.com';
         $amount = number_format($donation->amount, 2);
 
-        Mail::raw(
-            "The GCash QR donation with tracking number $donation->donation_tracking_number has been confirmed and marked as paid.",
-            function ($msg) use ($adminEmail) {
-                $msg->to($adminEmail)->subject('GCash QR Donation Confirmed');
-            }
-        );
+        Mail::to($adminEmail)->send(new KalingaEmail(
+            'GCash QR Donation Confirmed',
+            "The GCash QR donation with tracking number $donation->donation_tracking_number has been confirmed and marked as paid."
+        ));
 
         if ($donation->email) {
-            Mail::raw(
-                "We have confirmed your GCash donation of ₱$amount. Thank you so much for supporting Kalinga ng Kababaihan.",
-                function ($msg) use ($donation) {
-                    $msg->to($donation->email)->subject('GCash Donation Confirmed');
-                }
-            );
+            Mail::to($donation->email)->send(new KalingaEmail(
+                'GCash Donation Confirmed',
+                "We have confirmed your GCash donation of ₱$amount. Thank you so much for supporting Kalinga ng Kababaihan."
+            ));
         }
 
         return $donation;
@@ -189,20 +176,16 @@ class DonationService
             $donation->save();
 
             $adminEmail = 'margeiremulta@gmail.com';
-            Mail::raw(
-                "The cash donation with tracking number $donation->donation_tracking_number has been received.",
-                function ($msg) use ($adminEmail) {
-                    $msg->to($adminEmail)->subject('Cash Donation Received');
-                }
-            );
+            Mail::to($adminEmail)->send(new KalingaEmail(
+                'Cash Donation Received',
+                "The cash donation with tracking number $donation->donation_tracking_number has been received."
+            ));
 
             if ($donation->email) {
-                Mail::raw(
-                    "We have received your cash donation. Thank you and may God bless you!",
-                    function ($msg) use ($donation) {
-                        $msg->to($donation->email)->subject('Donation Received');
-                    }
-                );
+                Mail::to($donation->email)->send(new KalingaEmail(
+                    'Donation Received',
+                    "We have received your cash donation. Thank you and may God bless you!"
+                ));
             }
 
             return true;

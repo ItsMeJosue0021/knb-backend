@@ -25,7 +25,7 @@ class CashDonation extends Model
 
         static::creating(function ($donation) {
             if (empty($donation->donation_tracking_number)) {
-                $donation->donation_tracking_number = 'GDN-' . now()->format('Ymd') . '-' . strtoupper(Str::random(6));
+                $donation->donation_tracking_number = 'CDN-' . now()->format('Ymd') . '-' . strtoupper(Str::random(6));
             }
         });
     }

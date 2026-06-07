@@ -284,6 +284,7 @@ Route::delete('/goods-donation-subcategories/{id}', [GDSubcategoryController::cl
 Route::get('/expenditures/search', [ExpenditureController::class, 'search']);
 Route::get('/expenditures/date-range', [ExpenditureController::class, 'getByDateRange']);
 Route::get('/expenditures/totals', [ExpenditureController::class, 'getTotals']);
+Route::get('/expenditures/balance-history', [ExpenditureController::class, 'balanceHistory']);
 Route::get('/expenditures/print', [ExpenditureController::class, 'print']);
 Route::get('/expenditures/{id}/print', [ExpenditureController::class, 'printExpenditure']);
 Route::post('/expenditures/update/{id}', [ExpenditureController::class, 'update']);

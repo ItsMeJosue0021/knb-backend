@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use Exception;
+use App\Mail\KalingaEmail;
 use Illuminate\Http\Request;
 use App\Models\GoodsDonation;
 use App\Http\Requests\EditGDNameOrDescription;
@@ -117,21 +118,17 @@ class GoodsDonationController extends Controller
 
         // Email to admin
         $donorName = $donation->name ?? 'Someone';
-        Mail::raw(
-            "{$donorName} will be donating {$types} at your {$donation->address}.",
-            function ($message) use ($email) {
-                $message->to($email)->subject('New Goods Donation');
-            }
-        );
+        Mail::to($email)->send(new KalingaEmail(
+            'New Goods Donation',
+            "{$donorName} will be donating {$types} at your {$donation->address}."
+        ));
 
         // Email to donor
         if ($donation->email) {
-            Mail::raw(
-                'Please proceed to the chosen address to hand in your donations. Thank you so much, and may God bless you!',
-                function ($message) use ($donation) {
-                    $message->to($donation->email)->subject('Thank you for your donation!');
-                }
-            );
+            Mail::to($donation->email)->send(new KalingaEmail(
+                'Thank you for your donation!',
+                'Please proceed to the chosen address to hand in your donations. Thank you so much, and may God bless you!'
+            ));
         }
 
         return response()->json([
@@ -478,9 +475,10 @@ class GoodsDonationController extends Controller
                         . "Items received:\n{$itemsList}\n\n"
                         . "If anything looks incorrect, please let us know.";
 
-                    Mail::raw($body, function ($message) use ($donation) {
-                        $message->to($donation->email)->subject('Goods donation received');
-                    });
+                    Mail::to($donation->email)->send(new KalingaEmail(
+                        'Goods donation received',
+                        $body
+                    ));
                 } catch (Exception $mailException) {
                     Log::warning('Failed to send donor confirmation email during goods donation approval.', [
                         'donation_id' => $id,
@@ -573,9 +571,10 @@ class GoodsDonationController extends Controller
                     . "{$contactText}\n\n"
                     . "Thank you again for your support.";
 
-                Mail::raw($body, function ($message) use ($donation) {
-                    $message->to($donation->email)->subject('Goods donation update');
-                });
+                Mail::to($donation->email)->send(new KalingaEmail(
+                    'Goods donation update',
+                    $body
+                ));
             }
 
             return response()->json([

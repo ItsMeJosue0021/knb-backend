@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use Exception;
+use App\Mail\KalingaEmail;
 use App\Models\Donation;
 use Illuminate\Http\Request;
 use App\Models\GoodsDonation;
@@ -97,29 +98,33 @@ class DonationController extends Controller
 
         if ($type === 'gcash') {
             // Email to admin
-            Mail::raw("$name has donated ₱$amount through GCash.", function ($msg) use ($adminEmail) {
-                $msg->to($adminEmail)->subject('New GCash Donation');
-            });
+            Mail::to($adminEmail)->send(new KalingaEmail(
+                'New GCash Donation',
+                "$name has donated ₱$amount through GCash."
+            ));
 
             // Email to donor
             if ($donation->email) {
-                Mail::raw("We have received your donation. Thank you and may God bless you.", function ($msg) use ($donation) {
-                    $msg->to($donation->email)->subject('Donation Received');
-                });
+                Mail::to($donation->email)->send(new KalingaEmail(
+                    'Donation Received',
+                    "We have received your donation. Thank you and may God bless you."
+                ));
             }
 
         } elseif ($type === 'cash') {
             // Email to admin
             $address = $donation->address ?? 'office.'; // you can also make this dynamic
-            Mail::raw("$name will be donating ₱$amount in cash at your $address.", function ($msg) use ($adminEmail) {
-                $msg->to($adminEmail)->subject('Upcoming Cash Donation');
-            });
+            Mail::to($adminEmail)->send(new KalingaEmail(
+                'Upcoming Cash Donation',
+                "$name will be donating ₱$amount in cash at your $address."
+            ));
 
             // Email to donor
             if ($donation->email) {
-                Mail::raw("Please proceed to the chosen address to hand in your cash donation. Thank you so much.", function ($msg) use ($donation) {
-                    $msg->to($donation->email)->subject('Donation Instructions');
-                });
+                Mail::to($donation->email)->send(new KalingaEmail(
+                    'Donation Instructions',
+                    "Please proceed to the chosen address to hand in your cash donation. Thank you so much."
+                ));
             }
         }
 

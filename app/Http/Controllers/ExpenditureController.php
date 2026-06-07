@@ -137,6 +137,13 @@ class ExpenditureController extends Controller
         ], 200);
     }
 
+    public function balanceHistory()
+    {
+        return response([
+            'history' => $this->expenditureService->getBalanceHistory(),
+        ], 200);
+    }
+
     /**
      * Search expenditures by reference number, name, description, amount, or payment method.
      *
