@@ -16,6 +16,7 @@ class Project extends Model
         'description',
         'image',
         'is_event',
+        'max_volunteers',
     ];
 
     public function tags()
@@ -36,5 +37,15 @@ class Project extends Model
     public function cashLiquidations()
     {
         return $this->hasMany(CashLiquidation::class);
+    }
+
+    public function volunteerRequests()
+    {
+        return $this->hasMany(VolunteerRequest::class);
+    }
+
+    public function approvedVolunteerRequests()
+    {
+        return $this->hasMany(VolunteerRequest::class)->where('status', 'approved');
     }
 }

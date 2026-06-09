@@ -7,6 +7,7 @@ use App\Models\User;
 use App\Models\VolunteerRequest;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Mail;
+use Illuminate\Validation\ValidationException;
 
 class VolunteerService
 {
@@ -103,6 +104,13 @@ class VolunteerService
      */
     public function volunteer(array $data, int $project_id)
     {
+        $project = Project::findOrFail($project_id);
+        if ($this->projectVolunteerLimitReached($project)) {
+            throw ValidationException::withMessages([
+                'form' => ['Volunteer slots are already full for this project.'],
+            ]);
+        }
+
         // Allow optional auth: try API guard first, then default
         $user = auth('sanctum')->user() ?? Auth::user();
 
@@ -138,7 +146,7 @@ class VolunteerService
         $volunteerRequest = VolunteerRequest::create($payload);
 
         if (!empty($payload['email'])) {
-            $projectName = Project::find($project_id)?->title ?? 'the project';
+            $projectName = $project->title ?? 'the project';
 
             Mail::send(
                 'emails.volunteer.received',
@@ -164,6 +172,12 @@ class VolunteerService
     public function approve(int $requestId)
     {
         $request = VolunteerRequest::with('project')->findOrFail($requestId);
+        if ($request->status !== 'approved' && $request->project && $this->projectVolunteerLimitReached($request->project)) {
+            throw ValidationException::withMessages([
+                'form' => ['Volunteer slots are already full for this project.'],
+            ]);
+        }
+
         $request->update(['status' => 'approved']);
 
         if (!empty($request->email)) {
@@ -221,5 +235,15 @@ class VolunteerService
      */
     public function delete(int $requestId) {
         VolunteerRequest::findOrFail($requestId)->delete();
+    }
+
+    private function projectVolunteerLimitReached(Project $project): bool
+    {
+        $maxVolunteers = $project->max_volunteers !== null ? (int) $project->max_volunteers : null;
+        if ($maxVolunteers === null || $maxVolunteers <= 0) {
+            return false;
+        }
+
+        return $project->approvedVolunteerRequests()->count() >= $maxVolunteers;
     }
 }

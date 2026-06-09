@@ -1,7 +1,10 @@
 <!DOCTYPE html>
 <html lang="en">
 @php
-    $logoUrl = config('app.email_logo_url');
+    $logoUrl = $fallbackLogoUrl ?? config('app.email_logo_url');
+    if (!empty($logoPath) && is_file($logoPath) && isset($message)) {
+        $logoUrl = $message->embed($logoPath);
+    }
 @endphp
 <head>
     <meta charset="utf-8">

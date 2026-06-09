@@ -34,6 +34,7 @@ class ProjectController extends Controller
         $endDate = $request->input('end_date');
 
         $projects = Project::query()
+            ->withCount(['approvedVolunteerRequests as approved_volunteers_count'])
             ->when($startDate, function ($query) use ($startDate) {
                 $query->whereDate('date', '>=', $startDate);
             })
@@ -43,17 +44,8 @@ class ProjectController extends Controller
             ->latest()
             ->get()
             ->map(function ($project) {
-            return [
-                'id' => $project->id,
-                'title' => $project->title,
-                'date' => $project->date,
-                'location' => $project->location,
-                'description' => $project->description,
-                'tags' => $project->tags ? explode(',', $project->tags) : [],
-                'image' => $project->image,
-                'is_event' => $project->is_event,
-            ];
-        });
+                return $this->formatProjectSummary($project);
+            });
 
         return response()->json($projects);
     }
@@ -143,20 +135,12 @@ class ProjectController extends Controller
 
     public function pastProjects() {
         $projects = Project::whereDate('date', '<', today())
+            ->withCount(['approvedVolunteerRequests as approved_volunteers_count'])
             ->orderBy('date', 'desc')
             ->take(2)
             ->get()
             ->map(function ($project) {
-                return [
-                    'id' => $project->id,
-                    'title' => $project->title,
-                    'date' => $project->date,
-                    'location' => $project->location,
-                    'description' => $project->description,
-                    'tags' => $project->tags ? explode(',', $project->tags) : [],
-                    'image' => $project->image,
-                    'is_event' => $project->is_event,
-                ];
+                return $this->formatProjectSummary($project);
             });
 
         return response()->json($projects);
@@ -166,6 +150,7 @@ class ProjectController extends Controller
         $search = $request->input('search');
 
         $projects = Project::whereDate('date', '>=', today())
+            ->withCount(['approvedVolunteerRequests as approved_volunteers_count'])
             ->when($search, function ($query) use ($search) {
                 $query->where(function ($q) use ($search) {
                     $q->where('title', 'like', "%{$search}%")
@@ -177,16 +162,7 @@ class ProjectController extends Controller
             ->orderBy('date', 'asc')
             ->get()
             ->map(function ($project) {
-                return [
-                    'id' => $project->id,
-                    'title' => $project->title,
-                    'date' => $project->date,
-                    'location' => $project->location,
-                    'description' => $project->description,
-                    'tags' => $project->tags ? explode(',', $project->tags) : [],
-                    'image' => $project->image,
-                    'is_event' => $project->is_event,
-                ];
+                return $this->formatProjectSummary($project);
             });
 
         return response()->json($projects);
@@ -204,6 +180,7 @@ class ProjectController extends Controller
             'tags.*' => 'string',
             'image' => 'nullable|image|max:2048',
             'is_event' => 'sometimes|boolean',
+            'max_volunteers' => 'nullable|integer|min:1',
             'proposed_resources' => 'nullable|array',
             'proposed_resources.*.name' => 'required|string|max:255',
             'proposed_resources.*.category_id' => 'nullable|integer|exists:g_d_categories,id',
@@ -224,6 +201,7 @@ class ProjectController extends Controller
                     'description' => $project['description'],
                     'tags' => isset($project['tags']) ? implode(',', $project['tags']) : null,
                     'is_event' => $project['is_event'] ?? false,
+                    'max_volunteers' => $project['max_volunteers'] ?? null,
                 ]);
 
                 if ($request->hasFile('image')) {
@@ -271,6 +249,7 @@ class ProjectController extends Controller
             'tags.*' => 'string',
             'image' => 'nullable|image|max:2048',
             'is_event' => 'sometimes|boolean',
+            'max_volunteers' => 'nullable|integer|min:1',
             'sync_proposed_resources' => 'sometimes|boolean',
             'proposed_resources' => 'nullable|array',
             'proposed_resources.*.name' => 'required|string|max:255',
@@ -306,6 +285,7 @@ class ProjectController extends Controller
                     'tags',
                     'proposedResources.categoryModel:id,name',
                     'proposedResources.subCategoryModel:id,name',
+                    'approvedVolunteerRequests',
                 ])
             )
         );
@@ -317,6 +297,7 @@ class ProjectController extends Controller
             'tags',
             'proposedResources.categoryModel:id,name',
             'proposedResources.subCategoryModel:id,name',
+            'approvedVolunteerRequests',
         ])->findOrFail($id);
 
         return response()->json($this->formatProjectDetail($project));
@@ -334,20 +315,12 @@ class ProjectController extends Controller
         $query = $request->input('search');
 
         $projects = Project::where('title', 'like', "%$query%")
+            ->withCount(['approvedVolunteerRequests as approved_volunteers_count'])
             ->orWhere('description', 'like', "%$query%")
             ->orWhere('location', 'like', "%$query%")
             ->get()
             ->map(function ($project) {
-                return [
-                    'id' => $project->id,
-                    'title' => $project->title,
-                    'date' => $project->date,
-                    'location' => $project->location,
-                    'description' => $project->description,
-                    'tags' => $project->tags ? explode(',', $project->tags) : [],
-                    'image' => $project->image,
-                    'is_event' => $project->is_event,
-                ];
+                return $this->formatProjectSummary($project);
             });
 
         return response()->json($projects);
@@ -469,17 +442,36 @@ class ProjectController extends Controller
     private function formatProjectDetail(Project $project): array
     {
         return [
+            ...$this->formatProjectSummary($project),
+            'proposed_resources' => $project->proposedResources->map(function ($resource) {
+                return $this->formatProposedResource($resource);
+            })->values()->all(),
+        ];
+    }
+
+    private function formatProjectSummary(Project $project): array
+    {
+        $tagValue = $project->getAttribute('tags');
+        $approvedCount = (int) (
+            $project->approved_volunteers_count
+            ?? ($project->relationLoaded('approvedVolunteerRequests')
+                ? $project->approvedVolunteerRequests->count()
+                : $project->approvedVolunteerRequests()->count())
+        );
+        $maxVolunteers = $project->max_volunteers !== null ? (int) $project->max_volunteers : null;
+
+        return [
             'id' => $project->id,
             'title' => $project->title,
             'date' => $project->date,
             'location' => $project->location,
             'description' => $project->description,
-            'tags' => $project->tags ? explode(',', $project->tags) : [],
+            'tags' => is_string($tagValue) && $tagValue !== '' ? explode(',', $tagValue) : [],
             'image' => $project->image,
             'is_event' => $project->is_event,
-            'proposed_resources' => $project->proposedResources->map(function ($resource) {
-                return $this->formatProposedResource($resource);
-            })->values()->all(),
+            'max_volunteers' => $maxVolunteers,
+            'approved_volunteers_count' => $approvedCount,
+            'volunteer_slots_full' => $maxVolunteers !== null && $maxVolunteers > 0 && $approvedCount >= $maxVolunteers,
         ];
     }
 

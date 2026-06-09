@@ -8,6 +8,7 @@ use App\Services\VolunteerService;
 use Exception;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
+use Illuminate\Validation\ValidationException;
 
 class VolunteerRequestController extends Controller
 {
@@ -42,6 +43,11 @@ class VolunteerRequestController extends Controller
                 'volunteer_request' => $volunteerRequest,
                 'message' => 'Volunteer request submitted successfully.',
             ], 201);
+        } catch (ValidationException $exception) {
+            return response([
+                'message' => $exception->getMessage(),
+                'errors' => $exception->errors(),
+            ], 422);
         } catch (Exception $exception) {
             return response([
                 'message' => $exception->getMessage(),
@@ -60,6 +66,11 @@ class VolunteerRequestController extends Controller
             return response([
                 'message' => 'Request has been deleted successfully!'
             ], 200);
+        } catch (ValidationException $exception) {
+            return response([
+                'message' => $exception->getMessage(),
+                'errors' => $exception->errors(),
+            ], 422);
         } catch (Exception $exception) {
             return response([
                 'message' => $exception->getMessage(),
@@ -112,6 +123,11 @@ class VolunteerRequestController extends Controller
             return response([
                 'message' => 'The request has been approved.'
             ], 200);
+        } catch (ValidationException $exception) {
+            return response([
+                'message' => $exception->getMessage(),
+                'errors' => $exception->errors(),
+            ], 422);
         } catch (Exception $exception) {
             return response([
                 'message' => $exception->getMessage(),
