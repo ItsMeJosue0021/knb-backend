@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\Project;
+use App\Models\User;
 use App\Models\VolunteerRequest;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Mail;
@@ -53,11 +54,45 @@ class VolunteerService
      */
     public function getApprovedByProjectId(int $projectId)
     {
-        return VolunteerRequest::with(['project'])
+        $volunteerRequests = VolunteerRequest::with(['project', 'user.member'])
             ->where('project_id', $projectId)
             ->where('status', 'approved')
             ->latest()
             ->get();
+
+        $emails = $volunteerRequests
+            ->pluck('email')
+            ->filter()
+            ->map(fn ($email) => strtolower(trim((string) $email)))
+            ->unique()
+            ->values();
+
+        $usersByEmail = User::with('member')
+            ->whereIn('email', $emails)
+            ->get()
+            ->keyBy(fn ($user) => strtolower(trim((string) $user->email)));
+
+        return $volunteerRequests->map(function (VolunteerRequest $request) use ($usersByEmail) {
+            $emailKey = strtolower(trim((string) $request->email));
+            $matchedUser = $request->user ?: $usersByEmail->get($emailKey);
+            $member = $matchedUser?->member;
+
+            if ($matchedUser && (!$request->is_user || (int) $request->user_id !== (int) $matchedUser->id)) {
+                $request->is_user = true;
+                $request->user_id = $matchedUser->id;
+            }
+
+            if ($member) {
+                $request->is_member = true;
+                $request->member_number = $member->member_number ?? $request->member_number;
+            }
+
+            if ($request->isDirty(['is_user', 'user_id', 'is_member', 'member_number'])) {
+                $request->save();
+            }
+
+            return $request;
+        });
     }
 
     /**
