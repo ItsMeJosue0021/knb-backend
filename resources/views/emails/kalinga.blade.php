@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 @php
-    $logoUrl = rtrim((string) config('app.url'), '/') . '/logo.png';
+    $logoUrl = config('app.email_logo_url');
 @endphp
 <head>
     <meta charset="utf-8">

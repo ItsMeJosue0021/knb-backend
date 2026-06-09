@@ -1,6 +1,6 @@
 @props(['url'])
 @php
-    $logoUrl = rtrim((string) config('app.url'), '/') . '/logo.png';
+    $logoUrl = config('app.email_logo_url');
 @endphp
 <tr>
 <td class="header" style="padding: 25px 0; text-align: center;">

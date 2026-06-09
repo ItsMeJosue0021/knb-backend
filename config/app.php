@@ -54,6 +54,8 @@ return [
 
     'url' => env('APP_URL', 'http://localhost'),
 
+    'email_logo_url' => env('MAIL_LOGO_URL', 'https://api.kalingangkababaihan.com/storage/website-logo/logo.png'),
+
     /*
     |--------------------------------------------------------------------------
     | Application Timezone
