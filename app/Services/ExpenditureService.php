@@ -206,11 +206,17 @@ class ExpenditureService {
             ->with('project:id,title')
             ->get()
             ->map(function ($expense) {
+                $isLiquidation = $expense->source_type === 'project_liquidation';
+
+                $source = $isLiquidation
+                    ? (optional($expense->project)->title ?: 'Project Liquidation')
+                    : 'Manual Expense';
+
                 return [
                     'id' => 'expense-' . $expense->id,
                     'date' => $expense->date_incurred,
                     'type' => 'expense',
-                    'source' => optional($expense->project)->title ?: 'Expense',
+                    'source' => $source,
                     'description' => $expense->name,
                     'tracking_number' => $expense->reference_number,
                     'amount' => (float) $expense->amount,
