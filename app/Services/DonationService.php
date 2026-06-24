@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Mail\KalingaEmail;
 use App\Models\CashDonation;
 use App\Models\GCashDonation;
+use App\Support\DonationAddress;
 use App\Services\PayMongoService;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Mail;
@@ -27,32 +28,29 @@ class DonationService
         $donation = CashDonation::create($data);
 
         if ($donation) {
-            $address = $donation->drop_off_address ?? 'office.';
             $name = $donation->name ?? 'Someone';
             $amount = number_format($donation->amount, 2);
+            $dropOff = DonationAddress::describe($donation->drop_off_address);
+            $fullAddress = DonationAddress::resolve($donation->drop_off_address);
 
             Mail::to($adminEmail)->send(new KalingaEmail(
                 'Upcoming Cash Donation',
-                "$name will be donating ₱$amount in cash at your $address on $donation->drop_off_date at $donation->drop_off_time."
+                "$name will be donating ₱$amount in cash at $dropOff on {$donation->drop_off_date} at {$donation->drop_off_time}.\n\n"
+                . "Please prepare to receive the donation accordingly."
             ));
-
-            $address = '';
-            switch ($donation->drop_off_address) {
-                case "Main Address":
-                    $address = "B4 Lot 6-6 Fantasy Road 3, Teresa Park Subd., Pilar, Las Piñas City";
-                    break;
-                case "Satellite Address":
-                    $address = "Block 20 Lot 15-A Mines View, Teresa Park Subd., Pilar, Las Piñas City";
-                    break;
-                default:
-                    $address = $donation->drop_off_address ?? 'office.';
-                    break;
-            }
 
             if ($donation->email) {
                 Mail::to($donation->email)->send(new KalingaEmail(
-                    'Donation Instructions',
-                    "Please proceed to $address to hand in your cash donation on $donation->drop_off_date at $donation->drop_off_time. Thank you so much."
+                    'Your Cash Donation Instructions',
+                    "Dear {$name},\n\n"
+                    . "Thank you for your generous pledge to donate ₱{$amount} in cash to Kalinga ng Kababaihan.\n\n"
+                    . "Here are your drop-off details:\n"
+                    . "Location: {$fullAddress}\n"
+                    . "Date: {$donation->drop_off_date}\n"
+                    . "Time: {$donation->drop_off_time}\n\n"
+                    . "Please proceed to the address above on your chosen schedule to hand in your donation. "
+                    . "If you need to reschedule or have any questions, simply reply to this email and we will gladly assist you.\n\n"
+                    . "Your support means so much to the women and families we serve. Thank you, and may God bless you abundantly!"
                 ));
             }
         }

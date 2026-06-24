@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use Exception;
 use App\Mail\KalingaEmail;
 use App\Models\Donation;
+use App\Support\DonationAddress;
 use Illuminate\Http\Request;
 use App\Models\GoodsDonation;
 use App\Jobs\SendDonationEmails;
@@ -113,17 +114,23 @@ class DonationController extends Controller
 
         } elseif ($type === 'cash') {
             // Email to admin
-            $address = $donation->address ?? 'office.'; // you can also make this dynamic
+            $dropOff = DonationAddress::describe($donation->address);
             Mail::to($adminEmail)->send(new KalingaEmail(
                 'Upcoming Cash Donation',
-                "$name will be donating ₱$amount in cash at your $address."
+                "$name will be donating ₱$amount in cash at $dropOff.\n\n"
+                . "Please prepare to receive the donation accordingly."
             ));
 
             // Email to donor
             if ($donation->email) {
                 Mail::to($donation->email)->send(new KalingaEmail(
-                    'Donation Instructions',
-                    "Please proceed to the chosen address to hand in your cash donation. Thank you so much."
+                    'Your Cash Donation Instructions',
+                    "Dear {$name},\n\n"
+                    . "Thank you for your generous pledge to donate ₱{$amount} in cash to Kalinga ng Kababaihan.\n\n"
+                    . "You may hand in your donation at the drop-off point you selected:\n"
+                    . "{$dropOff}\n\n"
+                    . "If you have any questions or need to reschedule, simply reply to this email and we will gladly assist you.\n\n"
+                    . "Your support means so much to the women and families we serve. Thank you, and may God bless you abundantly!"
                 ));
             }
         }

@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use Exception;
 use App\Mail\KalingaEmail;
+use App\Support\DonationAddress;
 use Illuminate\Http\Request;
 use App\Models\GoodsDonation;
 use App\Http\Requests\EditGDNameOrDescription;
@@ -118,16 +119,28 @@ class GoodsDonationController extends Controller
 
         // Email to admin
         $donorName = $donation->name ?? 'Someone';
+        $dropOff = DonationAddress::describe($donation->address);
+        $goodsLine = $types !== '' ? $types : 'goods';
+
         Mail::to($email)->send(new KalingaEmail(
             'New Goods Donation',
-            "{$donorName} will be donating {$types} at your {$donation->address}."
+            "{$donorName} will be donating the following: {$goodsLine}.\n\n"
+            . "Preferred drop-off point: {$dropOff}.\n\n"
+            . "Please prepare to receive the donation accordingly."
         ));
 
         // Email to donor
         if ($donation->email) {
             Mail::to($donation->email)->send(new KalingaEmail(
-                'Thank you for your donation!',
-                'Please proceed to the chosen address to hand in your donations. Thank you so much, and may God bless you!'
+                'Thank You for Your Goods Donation!',
+                "Dear {$donorName},\n\n"
+                . "Thank you so much for your generous goods donation to Kalinga ng Kababaihan. "
+                . "We have recorded your donation of {$goodsLine}.\n\n"
+                . "You may hand in your donation at the drop-off point you selected:\n"
+                . "{$dropOff}\n\n"
+                . "Our team will be ready to receive it. If you have any questions or need to adjust your schedule, "
+                . "simply reply to this email and we will gladly assist you.\n\n"
+                . "Your kindness helps us continue our mission of caring for women and families. May God bless you abundantly!"
             ));
         }
 

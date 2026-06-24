@@ -3,6 +3,7 @@
 namespace App\Mail;
 
 use App\Models\Donation;
+use App\Mail\Concerns\ResolvesEmailLogo;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Mail\Mailable;
@@ -12,7 +13,7 @@ use Illuminate\Queue\SerializesModels;
 
 class CashDonationToAdmin extends Mailable
 {
-    use Queueable, SerializesModels;
+    use Queueable, SerializesModels, ResolvesEmailLogo;
     public $donation;
 
     /**
@@ -40,6 +41,7 @@ class CashDonationToAdmin extends Mailable
     {
         return new Content(
             view: 'emails.cash_to_admin',
+            with: $this->logoViewData(),
         );
     }
 
