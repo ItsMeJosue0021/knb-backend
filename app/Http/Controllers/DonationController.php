@@ -5,7 +5,6 @@ namespace App\Http\Controllers;
 use Exception;
 use App\Mail\KalingaEmail;
 use App\Models\Donation;
-use App\Support\DonationAddress;
 use Illuminate\Http\Request;
 use App\Models\GoodsDonation;
 use App\Jobs\SendDonationEmails;
@@ -20,6 +19,21 @@ class DonationController extends Controller
     //     $donations = Donation::all();
     //     return response()->json($donations, );
     // }
+
+    /**
+     * Describe a chosen drop-off option with its full street address,
+     * e.g. "Main Address (B4 Lot 6-6 Fantasy Road 3, ...)".
+     */
+    private function describeDropOffAddress(?string $choice): string
+    {
+        $full = match ($choice) {
+            'Main Address' => 'B4 Lot 6-6 Fantasy Road 3, Teresa Park Subd., Pilar, Las Piñas City',
+            'Satellite Address' => 'Block 20 Lot 15-A Mines View, Teresa Park Subd., Pilar, Las Piñas City',
+            default => $choice ?: 'our office',
+        };
+
+        return ($choice && $choice !== $full) ? "{$choice} ({$full})" : $full;
+    }
 
     public function index(Request $request)
     {
@@ -114,7 +128,7 @@ class DonationController extends Controller
 
         } elseif ($type === 'cash') {
             // Email to admin
-            $dropOff = DonationAddress::describe($donation->address);
+            $dropOff = $this->describeDropOffAddress($donation->address);
             Mail::to($adminEmail)->send(new KalingaEmail(
                 'Upcoming Cash Donation',
                 "$name will be donating ₱$amount in cash at $dropOff.\n\n"

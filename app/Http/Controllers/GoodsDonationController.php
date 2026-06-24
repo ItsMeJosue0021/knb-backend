@@ -4,7 +4,6 @@ namespace App\Http\Controllers;
 
 use Exception;
 use App\Mail\KalingaEmail;
-use App\Support\DonationAddress;
 use Illuminate\Http\Request;
 use App\Models\GoodsDonation;
 use App\Http\Requests\EditGDNameOrDescription;
@@ -29,6 +28,21 @@ class GoodsDonationController extends Controller
     {
         $this->goodsDonationService = $goodsDonationService;
         $this->inventoryService = $inventoryService;
+    }
+
+    /**
+     * Describe a chosen drop-off option with its full street address,
+     * e.g. "Main Address (B4 Lot 6-6 Fantasy Road 3, ...)".
+     */
+    private function describeDropOffAddress(?string $choice): string
+    {
+        $full = match ($choice) {
+            'Main Address' => 'B4 Lot 6-6 Fantasy Road 3, Teresa Park Subd., Pilar, Las Piñas City',
+            'Satellite Address' => 'Block 20 Lot 15-A Mines View, Teresa Park Subd., Pilar, Las Piñas City',
+            default => $choice ?: 'our office',
+        };
+
+        return ($choice && $choice !== $full) ? "{$choice} ({$full})" : $full;
     }
 
     public function index(Request $request)
@@ -119,7 +133,7 @@ class GoodsDonationController extends Controller
 
         // Email to admin
         $donorName = $donation->name ?? 'Someone';
-        $dropOff = DonationAddress::describe($donation->address);
+        $dropOff = $this->describeDropOffAddress($donation->address);
         $goodsLine = $types !== '' ? $types : 'goods';
 
         Mail::to($email)->send(new KalingaEmail(

@@ -5,7 +5,6 @@ namespace App\Services;
 use App\Mail\KalingaEmail;
 use App\Models\CashDonation;
 use App\Models\GCashDonation;
-use App\Support\DonationAddress;
 use App\Services\PayMongoService;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Mail;
@@ -19,6 +18,29 @@ class DonationService
         $this->paymongo = $paymongo;
     }
 
+    /**
+     * Map a chosen drop-off option to its full street address.
+     */
+    private function resolveDropOffAddress(?string $choice): string
+    {
+        return match ($choice) {
+            'Main Address' => 'B4 Lot 6-6 Fantasy Road 3, Teresa Park Subd., Pilar, Las Piñas City',
+            'Satellite Address' => 'Block 20 Lot 15-A Mines View, Teresa Park Subd., Pilar, Las Piñas City',
+            default => $choice ?: 'our office',
+        };
+    }
+
+    /**
+     * Describe a chosen drop-off option with its full street address,
+     * e.g. "Main Address (B4 Lot 6-6 Fantasy Road 3, ...)".
+     */
+    private function describeDropOffAddress(?string $choice): string
+    {
+        $full = $this->resolveDropOffAddress($choice);
+
+        return ($choice && $choice !== $full) ? "{$choice} ({$full})" : $full;
+    }
+
     public function processCashDonation(array $data)
     {
         $adminEmail = 'margeiremulta@gmail.com';
@@ -30,8 +52,8 @@ class DonationService
         if ($donation) {
             $name = $donation->name ?? 'Someone';
             $amount = number_format($donation->amount, 2);
-            $dropOff = DonationAddress::describe($donation->drop_off_address);
-            $fullAddress = DonationAddress::resolve($donation->drop_off_address);
+            $dropOff = $this->describeDropOffAddress($donation->drop_off_address);
+            $fullAddress = $this->resolveDropOffAddress($donation->drop_off_address);
 
             Mail::to($adminEmail)->send(new KalingaEmail(
                 'Upcoming Cash Donation',
